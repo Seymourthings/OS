@@ -154,8 +154,8 @@ lock_create(const char *name)
 		return NULL;
 	}
 
-	lock->lk_wchan = wchan_create(lock->lk_name);
-	if(lock->lk_wchan == NULL){
+	lock->lk_chan = wchan_create(lock->lk_name);
+	if(lock->lk_chan == NULL){
 		kfree(lock->lk_name);
 		kfree(lock);
 		return NULL;
@@ -169,8 +169,9 @@ void
 lock_destroy(struct lock *lock)
 {
 	KASSERT(lock != NULL);
+	KASSERT(lock->lk_thread == NULL);
 	spinlock_cleanup(&lock->lk_lock);
-	wchan_destory(lock->lk_chan);
+	wchan_destroy(lock->lk_chan);
 	kfree(lock->lk_name);
 	kfree(lock);
 }
@@ -198,7 +199,7 @@ lock_release(struct lock *lock)
 	KASSERT(lock_do_i_hold(lock));
 	spinlock_acquire(&lock->lk_lock);
 	lock->lk_thread = NULL;
-	wchan_wakeone(lock->lk_wchan, &lock->lk_lock);
+	wchan_wakeone(lock->lk_chan, &lock->lk_lock);
 	spinlock_release(&lock->lk_lock);
 
 }
