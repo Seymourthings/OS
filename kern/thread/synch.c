@@ -184,12 +184,12 @@ lock_destroy(struct lock *lock)
 void
 lock_acquire(struct lock *lock)
 {
-	KASSERT(lock != NULL);
 	KASSERT(curthread->t_in_interrupt == false);
 	spinlock_acquire(&lock->lk_lock);
-	KASSERT(!lock_do_i_hold(lock));
 	
 	HANGMAN_WAIT(&curthread->t_hangman, &lock->lk_hangman);
+	KASSERT(!lock_do_i_hold(lock));
+	
 	while(lock->lk_thread != NULL){
 		wchan_sleep(lock->lk_chan, &lock->lk_lock);
 	}
@@ -199,8 +199,6 @@ lock_acquire(struct lock *lock)
 	spinlock_release(&lock->lk_lock);	
 	/* Call this (atomically) before waiting for a lock */
 
-
-	/* Call this (atomically) once the lock is acquired */
 }
 
 void
@@ -211,10 +209,9 @@ lock_release(struct lock *lock)
 	spinlock_acquire(&lock->lk_lock);
 	lock->lk_thread = NULL;
 	wchan_wakeone(lock->lk_chan, &lock->lk_lock);
-	spinlock_release(&lock->lk_lock);
-	/* Call this (atomically) when the lock is released */
-	HANGMAN_RELEASE(&curthread->t_hangman, &lock->lk_hangman);
 
+	HANGMAN_RELEASE(&curthread->t_hangman, &lock->lk_hangman);
+	spinlock_release(&lock->lk_lock);
 }
 
 bool
