@@ -159,6 +159,10 @@ void cv_broadcast(struct cv *cv, struct lock *lock);
 
 struct rwlock {
         char *rwlock_name;
+  	struct thread *rw_thread;
+	struct lock *rw_lock;
+	struct wchan *rw_wchan;
+	struct semaphore *rw_sem;
         // add what you need here
         // (don't forget to mark things volatile as needed)
 };
