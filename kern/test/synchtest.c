@@ -358,7 +358,9 @@ cvtestthread(void *junk, unsigned long num)
 			testval2 = 0;
 			random_yielder(4);
 			gettime(&ts1);
+			kprintf("ABout to CV Wait");
 			cv_wait(testcv, testlock);
+			kprintf("Made it through");
 			gettime(&ts2);
 			random_yielder(4);
 
