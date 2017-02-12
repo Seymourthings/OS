@@ -75,7 +75,6 @@ sem_create(const char *name, unsigned initial_count)
 
 void
 sem_destroy(struct semaphore *sem)
-{
 	KASSERT(sem != NULL);
 
 	/* wchan_cleanup will assert if anyone's waiting on it */
@@ -131,7 +130,7 @@ V(struct semaphore *sem)
 	KASSERT(sem->sem_count > 0);
 	wchan_wakeone(sem->sem_wchan, &sem->sem_lock);
 
-	spinlock_release(&sem->sem_lock);
+	:spinlock_release(&sem->sem_lock);
 }
 
 ////////////////////////////////////////////////////////////
