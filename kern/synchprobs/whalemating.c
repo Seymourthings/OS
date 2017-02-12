@@ -69,46 +69,35 @@ whalemating_cleanup() {
 	sem_destroy(male_sem);
 	sem_destroy(female_sem);
 }
+/* In Synchprobs.c (fe)male_start & matchmaker_start use a global lock, 
+ * to enforce one or two of them waiting when all three are nto present.
+ * (Fe)male_start is called meaning mating has begun and its safe to decrement
+ * the (fe)male's sem count 
+ */
 
 void
 male(uint32_t index)
 {
-        
 	male_start(index);
 	P(male_sem);
 	male_end(index);	
-	/*
-	 * Implement this function by calling male_start and male_end when
-	 * appropriate.
-	 */
 	return;
 }
 
 void
 female(uint32_t index)
 {
-
 	female_start(index);
 	P(female_sem);
 	female_end(index);	
-	/*
-	 * Implement this function by calling female_start and female_end when
-	 * appropriate.
-	 */
-	return;
 }
 
 void
 matchmaker(uint32_t index)
 {	
-	
 	matchmaker_start(index);
 	V(male_sem);
 	V(female_sem);
 	matchmaker_end(index);	
-	/*
-	 * Implement this function by calling matchmaker_start and matchmaker_end
-	 * when appropriate.
-	 */
 	return;
 }
