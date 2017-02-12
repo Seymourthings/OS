@@ -197,6 +197,11 @@ matchmaker_wrapper(void * unused1, unsigned long index) {
 
 	return;
 }
+
+/*
+ * When the matchmaker gets called it decrements its own count 
+ * because it's not waiting on Male or Female (according to way test is built)
+ */
 void
 matchmaker_start(uint32_t index) {
 	(void)index;
