@@ -39,13 +39,33 @@
 #include <thread.h>
 #include <test.h>
 #include <synch.h>
+#include <wchan.h>
 
 /*
  * Called by the driver during initialization.
  */
+struct cv *cv;
+struct lock *lock;
+struct semaphore *male_sem;
+struct semaphore *female_sem;
+struct semaphore *match_sem;
+const char *name = "whale_mating";
 
 void whalemating_init() {
-	return;
+	cv = cv_create(name);
+	KASSERT(cv != NULL);
+	
+	lock = lock_create(name);
+	KASSERT(lock != NULL);	
+	
+	male_sem = sem_create(name, 0);
+	KASSERT(male_sem != NULL);
+
+	female_sem = sem_create(name, 0);
+	KASSERT(female_sem != NULL);
+
+	match_sem = sem_create(name, 0);
+	KASSERT(match_sem != NULL);
 }
 
 /*
@@ -54,13 +74,37 @@ void whalemating_init() {
 
 void
 whalemating_cleanup() {
-	return;
+	cv_destroy(cv);
+
+        lock_destroy(lock);
+        
+	sem_destroy(male_sem);
+	sem_destroy(female_sem);
+        sem_destroy(match_sem);
 }
 
 void
 male(uint32_t index)
 {
-	(void)index;
+	
+	V(male_sem);
+	if((female_sem->sem_count > 0) && (match_sem->sem_count > 0)){
+		male_start(index);
+	        male_end(index);
+        	P(male_sem);
+	}else {
+	 	spinlock_acquire(&male_sem->sem_lock);
+        	while((female_sem->sem_count == 0) || (match_sem->sem_count == 0)){
+                	wchan_sleep(male_sem->sem_wchan, &male_sem->sem_lock);
+		}
+                wchan_wakeone(male_sem->sem_wchan, &male_sem->sem_lock);
+		male_start(index);
+                male_end(index);
+                P(male_sem);
+                spinlock_release(&male_sem->sem_lock);
+		
+	}
+	
 	/*
 	 * Implement this function by calling male_start and male_end when
 	 * appropriate.
@@ -71,7 +115,23 @@ male(uint32_t index)
 void
 female(uint32_t index)
 {
-	(void)index;
+	V(female_sem);
+        if((male_sem->sem_count > 0) && (match_sem->sem_count > 0)){
+                female_start(index);
+                female_end(index);
+                P(female_sem);
+        }else {
+                spinlock_acquire(&female_sem->sem_lock);
+                while((male_sem->sem_count == 0) || (match_sem->sem_count == 0)){
+                        wchan_sleep(female_sem->sem_wchan, &female_sem->sem_lock);
+                }
+                wchan_wakeone(female_sem->sem_wchan, &female_sem->sem_lock);
+                female_start(index);
+                female_end(index);
+                P(female_sem);
+                spinlock_release(&female_sem->sem_lock);
+        }
+
 	/*
 	 * Implement this function by calling female_start and female_end when
 	 * appropriate.
@@ -81,8 +141,25 @@ female(uint32_t index)
 
 void
 matchmaker(uint32_t index)
-{
-	(void)index;
+{	
+	V(match_sem);
+        if((male_sem->sem_count > 0) && (female_sem->sem_count > 0)){
+                matchmaker_start(index);
+                matchmaker_end(index);
+                P(match_sem);
+        }else {
+                spinlock_acquire(&match_sem->sem_lock);
+                while((male_sem->sem_count == 0) || (female_sem->sem_count == 0)){
+                        wchan_sleep(match_sem->sem_wchan, &match_sem->sem_lock);
+                }
+                wchan_wakeone(match_sem->sem_wchan, &match_sem->sem_lock);
+
+                matchmaker_start(index);
+                matchmaker_end(index);
+                P(match_sem);
+                spinlock_release(&match_sem->sem_lock);
+        }
+
 	/*
 	 * Implement this function by calling matchmaker_start and matchmaker_end
 	 * when appropriate.
