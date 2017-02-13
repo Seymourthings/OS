@@ -296,7 +296,6 @@ cv_signal(struct cv *cv, struct lock *lock)
 	wchan_wakeone(cv->cv_wchan, &cv->cv_lock->lk_lock);
 	spinlock_release(&cv->cv_lock->lk_lock);		
 
-
 }
 
 void
