@@ -18,10 +18,10 @@
  * Use these stubs to test your reader-writer locks.
  */
 //static struct lock *testlock = NULL;
-//static struct rwlock *testrw = NULL;
+static struct rwlock *testrw = NULL;
 
-//struct spinlock status_lock;
-//static bool test_status = TEST161_FAIL;
+struct spinlock status_lock;
+static bool test_status = TEST161_FAIL;
 
 int rwtest(int nargs, char **args) {
 	(void)nargs;
@@ -102,18 +102,18 @@ int rwtest2(int nargs, char **args) {
 int rwtest3(int nargs, char **args) {
 	(void)nargs;
 	(void)args;
-/*	
+
 	kprintf_n("Starting rwt3...\n");
 	testrw = rwlock_create("testrw");
 	if(testrw == NULL){
                 panic("rwt3:rwlock_create failed\n");
         }
 
-	rwlock_acquire_write(testrw);
-	rwlock_release_write(testrw);
+	rwlock_acquire_read(testrw);
+	rwlock_release_read(testrw);
 	test_status = TEST161_SUCCESS;
 	success(test_status,SECRET, "rwt3");
-*/
+
 	return 0;
 }
 
