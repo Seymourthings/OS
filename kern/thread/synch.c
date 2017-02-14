@@ -74,7 +74,7 @@ sem_create(const char *name, unsigned initial_count)
 }
 
 void
-sem_destroy(struct semaphore *sem)
+sem_destroy(struct semaphore *sem){
 	KASSERT(sem != NULL);
 
 	/* wchan_cleanup will assert if anyone's waiting on it */
@@ -130,7 +130,7 @@ V(struct semaphore *sem)
 	KASSERT(sem->sem_count > 0);
 	wchan_wakeone(sem->sem_wchan, &sem->sem_lock);
 
-	:spinlock_release(&sem->sem_lock);
+	spinlock_release(&sem->sem_lock);
 }
 
 ////////////////////////////////////////////////////////////
@@ -360,35 +360,19 @@ void rwlock_destroy(struct rwlock *rw){
 
 void rwlock_acquire_read(struct rwlock *rw){
 	
-	KASSERT(curthread->t_in_interrupt == false);
 	KASSERT(rw != NULL);
-	while(rw->rw_lock->lk_thread != NULL){
-		wchan_sleep(rw->rw_wchan, &rw->rw_lock->lk_lock);
-	}
-	V(rw->rw_sem);
+	
 }
 
 void rwlock_release_read(struct rwlock *rw){
 	
-	KASSERT(rw != NULL);
-	KASSERT(lock_do_i_hold(rw->rw_lock));
-	P(rw->rw_sem);
-	wchan_wakeone(rw->rw_wchan, &rw->rw_lock->lk_lock);
-}
 
+	KASSERT(rw != NULL);
 void  rwlock_acquire_write(struct rwlock *rw){
 	
-	KASSERT(curthread->t_in_interrupt == false);
 	KASSERT(rw != NULL);
-	while(rw->rw_lock->lk_thread != NULL){
-		wchan_sleep(rw->rw_wchan, &rw->rw_lock->lk_lock);
-	}
-	lock_acquire(rw->rw_lock);
 }
 
 void rwlock_release_write(struct rwlock *rw){
 	KASSERT(rw != NULL);
-        KASSERT(lock_do_i_hold(rw->rw_lock));
-	lock_release(rw->rw_lock);
-	wchan_wakeall(rw->rw_wchan, &rw->rw_lock->lk_lock);
 }

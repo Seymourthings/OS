@@ -9,7 +9,7 @@
 #include <test.h>
 #include <current.h>
 #include <synch.h>
-include <kern/test161.h>
+#include <kern/test161.h>
 #include <spinlock.h>
 
 #define PROBLEMS_MAX_YIELDER 16
