@@ -160,7 +160,9 @@ struct rwlock {
   	struct thread *rw_thread;
 	struct lock *rw_lock;
 	struct wchan *rw_wchan;
-	struct semaphore *rw_sem;
+	struct semaphore *r_sem;
+	struct semaphore *w_sem;
+	volatile unsigned readcount;
         // add what you need here
         // (don't forget to mark things volatile as needed)
 };
