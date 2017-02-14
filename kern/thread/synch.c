@@ -43,9 +43,6 @@
 ////////////////////////////////////////////////////////////
 //
 // Semaphore.
-struct semaphore *r_sem;
-struct semaphore *w_sem;
-
 struct semaphore *
 sem_create(const char *name, unsigned initial_count)
 {
@@ -313,6 +310,8 @@ cv_broadcast(struct cv *cv, struct lock *lock)
 
 }
 
+
+
 struct rwlock * rwlock_create(const char *name)
 {
 	struct rwlock *rw;
@@ -328,27 +327,21 @@ struct rwlock * rwlock_create(const char *name)
 		return NULL;
 	}
 
-	rw->rw_lock = lock_create(rw->rwlock_name);
-	if(rw->rw_lock == NULL){
+	rw->rw_lk = lock_create(rw->rwlock_name);
+	if(rw->rw_lk == NULL){
 		
 		kfree(rw);
 		
 	}
-	r_sem = sem_create("readsem", 1);
-	
-	KASSERT(r_sem != NULL);
-	
-	w_sem = sem_create("global",1);
 
-	KASSERT(w_sem != NULL);
-
-
-	rw->rw_wchan = wchan_create(rw->rwlock_name);
-	if(rw->rw_wchan == NULL){
-		
+	rw->rw_cv = cv_create(rw->rwlock_name);
+	if(rw->rw_cv == NULL){
 		kfree(rw);
 	}
-	rw->readcount = 0;
+
+	rw->readers_waiting = 0;
+	rw->writer_flag = 0;
+
 	return rw;
 
 }
@@ -356,45 +349,54 @@ struct rwlock * rwlock_create(const char *name)
 void rwlock_destroy(struct rwlock *rw){
 	
 	KASSERT(rw != NULL);
-	lock_destroy(rw->rw_lock);
-	wchan_destroy(rw->rw_wchan);
-	sem_destroy(rw->r_sem);
-	sem_destroy(w_sem);
+	lock_destroy(rw->rw_lk);
+	cv_destroy(rw->rw_cv);
 	kfree(rw);
 
 }	
 
 void rwlock_acquire_read(struct rwlock *rw){
 	
-	KASSERT(rw != NULL);
-	P(r_sem);
-	rw->readcount = rw->readcount + 1;
-	if(rw->readcount > 0){
-		P(w_sem);
-	}
-	V(r_sem);	
 
+	KASSERT(rw != NULL);
+	lock_acquire(rw->rw_lk);
+	while(rw->writer_flag){
+		cv_wait(rw->rw_cv, rw->rw_lk);
+	}
+	rw->readers_waiting++;
+	lock_release(rw->rw_lk);
+	
 }
 void rwlock_release_read(struct rwlock *rw){
 
 	KASSERT(rw != NULL);
-	P(r_sem);
-	rw->readcount = rw->readcount - 1;
-	if(rw->readcount == 0){
-		V(w_sem);
+	KASSERT(curthread->t_in_interrupt == false);
+	lock_acquire(rw->rw_lk);
+	rw->readers_waiting--;
+	if(rw->readers_waiting == 0){
+		cv_signal(rw->rw_cv, rw->rw_lk);
 	}
-	V(r_sem);
-
+	lock_release(rw->rw_lk);
 }
 
 void  rwlock_acquire_write(struct rwlock *rw){
-	
+
 	KASSERT(rw != NULL);
-	P(w_sem);
+	KASSERT(curthread->t_in_interrupt == false);
+	lock_acquire(rw->rw_lk);
+	while(rw->writer_flag || rw->readers_waiting > 0){
+		cv_wait(rw->rw_cv, rw->rw_lk);
+	}
+	rw->writer_flag = 1;
+	lock_release(rw->rw_lk);
+
 }
 
 void rwlock_release_write(struct rwlock *rw){
 	KASSERT(rw != NULL);
-	V(w_sem);
+	lock_acquire(rw->rw_lk);
+	rw->writer_flag = 0;
+	cv_broadcast(rw->rw_cv, rw->rw_lk);
+	lock_release(rw->rw_lk);
 }
 

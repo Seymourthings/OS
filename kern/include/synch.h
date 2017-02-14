@@ -138,7 +138,6 @@ void cv_destroy(struct cv *);
  * For all three operations, the current thread must hold the lock passed
  * in. Note that under normal circumstances the same lock should be used
  * on all operations with any particular CV.
- *
  * These operations must be atomic. You get to write them.
  */
 void cv_wait(struct cv *cv, struct lock *lock);
@@ -157,12 +156,10 @@ void cv_broadcast(struct cv *cv, struct lock *lock);
 
 struct rwlock {
         char *rwlock_name;
-  	struct thread *rw_thread;
-	struct lock *rw_lock;
-	struct wchan *rw_wchan;
-	struct semaphore *r_sem;
-	struct semaphore *w_sem;
-	volatile unsigned readcount;
+	struct lock *rw_lk;
+	struct cv *rw_cv;
+	volatile int readers_waiting;
+	int writer_flag;
         // add what you need here
         // (don't forget to mark things volatile as needed)
 };
