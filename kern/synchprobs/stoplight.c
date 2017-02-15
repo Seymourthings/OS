@@ -139,7 +139,7 @@ turnright(uint32_t direction, uint32_t index)
 	
 
 	V(mux);
-	//made it into quad safe tp travel
+	//made it into quad safe to travel
 	inQuadrant(direction,index);
 	leaveIntersection(index);
 	V(getSem(direction));
@@ -220,7 +220,7 @@ turnleft(uint32_t direction, uint32_t index)
 			}
 		}
 		else{
-			//not safe to travel staright
+			//not safe to travel straight
 			V(getSem(direction));
 		}
 		V(mux);	
