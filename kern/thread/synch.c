@@ -377,8 +377,9 @@ void rwlock_acquire_read(struct rwlock *rw){
 		 * The writer sets sem count to 0.
 		 */
 	}
-	spinlock_release(&rw->rw_spinlk);
+	
 	V(rw->rw_sem);
+	spinlock_release(&rw->rw_spinlk);
 }
 
 void rwlock_release_read(struct rwlock *rw){
