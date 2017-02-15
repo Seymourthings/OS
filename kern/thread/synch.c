@@ -344,6 +344,7 @@ struct rwlock * rwlock_create(const char *name)
 		kfree(rw->rwlock_name);		
 		kfree(rw);
 	}
+	
 	spinlock_init(&rw->rw_spinlk);
 	rw->rw_thread = NULL;	
 	
@@ -410,7 +411,7 @@ void rwlock_release_write(struct rwlock *rw){
      	KASSERT(rw->rw_thread == curthread);
 	
 	spinlock_acquire(&rw->rw_spinlk);
-	wchan_wakeone(rw->rw_wchan, &rw->rw_spinlk);
+	wchan_wakeall(rw->rw_wchan, &rw->rw_spinlk);
 	spinlock_release(&rw->rw_spinlk);
 	
 	lock_acquire(rw->rw_lock);
