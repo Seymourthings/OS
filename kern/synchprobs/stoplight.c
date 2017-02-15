@@ -100,10 +100,19 @@ struct semaphore *getSem(uint32_t direction){
 void
 stoplight_init() {
 	mux = sem_create("mutex", 1);
+	KASSERT(mux != NULL);
+	
 	q0_sem = sem_create("quad 0", 1);
+	KASSERT(q0_sem != NULL);
+	
 	q1_sem = sem_create("quad 1", 1);
+	KASSERT(q1_sem != NULL);
+	
 	q2_sem = sem_create("quad 2", 1);
+	KASSERT(q2_sem != NULL);
+	
 	q3_sem = sem_create("quad 3", 1);
+	KASSERT(q3_sem != NULL);
 	
 	return;
 }
@@ -170,8 +179,9 @@ gostraight(uint32_t direction, uint32_t index)
 
 	leaveIntersection(index);
 
-	V(getSem(direction));
 	V(getSem(quad));
+	V(getSem(direction));
+
 
 
 
@@ -226,6 +236,5 @@ turnleft(uint32_t direction, uint32_t index)
 	V(getSem(nextQuad));
 	V(getSem(direction));
 	return;
-
 
 }
