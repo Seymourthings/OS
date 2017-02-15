@@ -99,11 +99,12 @@ struct semaphore *getSem(uint32_t direction){
  */
 void
 stoplight_init() {
+	mux = sem_create("mutex", 1);
 	q0_sem = sem_create("quad 0", 1);
 	q1_sem = sem_create("quad 1", 1);
 	q2_sem = sem_create("quad 2", 1);
 	q3_sem = sem_create("quad 3", 1);
-	mux = sem_create("mutex" , 1);
+	
 	return;
 }
 
@@ -155,6 +156,7 @@ gostraight(uint32_t direction, uint32_t index)
 			V(mux);
 			flag = 0;
 		}
+		//not safe to travel 
 		else{
 			V(getSem(direction));
 			V(mux);
