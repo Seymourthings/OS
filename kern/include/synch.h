@@ -161,6 +161,7 @@ struct rwlock {
 	struct lock *rw_lock;
 	struct wchan *rw_wchan;
 	struct semaphore *rw_sem;
+	struct spinlock rw_spinlk;
         // add what you need here
         // (don't forget to mark things volatile as needed)
 };
