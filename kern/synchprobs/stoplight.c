@@ -68,13 +68,52 @@
 #include <thread.h>
 #include <test.h>
 #include <synch.h>
+#include <current.h>
+struct semaphore *q0_sem;
+struct semaphore *q1_sem;
+struct semaphore *q2_sem;
+struct semaphore *q3_sem;
+struct semaphore *mux;
+
+
+//find which semaphore to use  depending on direction
+struct semaphore *getSem(uint32_t direction){	
+	switch(direction){
+		case 0:
+			return q0_sem;
+			break;
+		case 1:
+			return q1_sem;
+			break;
+		case 2:
+			return q2_sem;
+			break;
+		default:
+			return q3_sem;
+			break;
+	}
+}
 
 /*
  * Called by the driver during initialization.
  */
-
 void
 stoplight_init() {
+	mux = sem_create("mutex", 1);
+	KASSERT(mux != NULL);
+	
+	q0_sem = sem_create("quad 0", 1);
+	KASSERT(q0_sem != NULL);
+	
+	q1_sem = sem_create("quad 1", 1);
+	KASSERT(q1_sem != NULL);
+	
+	q2_sem = sem_create("quad 2", 1);
+	KASSERT(q2_sem != NULL);
+	
+	q3_sem = sem_create("quad 3", 1);
+	KASSERT(q3_sem != NULL);
+	
 	return;
 }
 
@@ -83,36 +122,119 @@ stoplight_init() {
  */
 
 void stoplight_cleanup() {
+	sem_destroy(q0_sem);
+	sem_destroy(q1_sem);
+	sem_destroy(q2_sem);
+	sem_destroy(q3_sem);
+	sem_destroy(mux);
 	return;
 }
 
 void
 turnright(uint32_t direction, uint32_t index)
 {
-	(void)direction;
-	(void)index;
-	/*
-	 * Implement this function.
-	 */
+	P(mux);
+	//try to move into quad
+	P(getSem(direction));
+	
+
+	V(mux);
+	//made it into quad safe tp travel
+	inQuadrant(direction,index);
+	leaveIntersection(index);
+	V(getSem(direction));
 	return;
 }
 void
 gostraight(uint32_t direction, uint32_t index)
 {
-	(void)direction;
-	(void)index;
-	/*
-	 * Implement this function.
-	 */
+	int flag,quad;
+	flag = 1;
+	
+	quad = ((direction + 3) % 4);
+	
+	while(flag){
+
+		P(mux);
+		//try to move into quad
+		P(getSem(direction));
+		//check if its safe to travel straight
+		if(getSem(quad)->sem_count > 0){
+			P(getSem(quad));
+			
+			V(mux);
+			flag = 0;
+		}
+		//not safe to travel 
+		else{
+			V(getSem(direction));
+			V(mux);
+		}
+	
+		
+	}
+	//made it into quads safe to travel 
+	inQuadrant(direction,index);
+	inQuadrant(quad,index);
+
+	leaveIntersection(index);
+
+	V(getSem(quad));
+	V(getSem(direction));
+
+
+
+
 	return;
 }
 void
 turnleft(uint32_t direction, uint32_t index)
-{
-	(void)direction;
-	(void)index;
-	/*
-	 * Implement this function.
-	 */
+{	
+	int flag,quad,nextQuad;
+	flag = 1;
+	quad = ((direction + 3) % 4);
+	nextQuad = ((direction + 2) % 4);
+	
+	while(flag){
+
+		P(mux);
+		//try to move into quad
+		P(getSem(direction));
+		
+		//check if its safe to travel straight
+		if((getSem(quad)->sem_count > 0)){ 
+	
+			P(getSem(quad));
+			//check if its safe to travel left
+			if((getSem(nextQuad)->sem_count > 0)){
+				
+				P(getSem(nextQuad));
+				
+				V(mux);
+				flag = 0;
+			}
+			else{
+				//not safe to travel left
+				V(getSem(quad));
+				V(getSem(direction));
+			}
+		}
+		else{
+			//not safe to travel staright
+			V(getSem(direction));
+		}
+		V(mux);	
+	}
+	//made it into quads safe to travel
+	inQuadrant(direction,index);
+	inQuadrant(quad,index);
+	inQuadrant(nextQuad,index);
+
+
+	leaveIntersection(index);
+	V(getSem(quad));
+	V(getSem(nextQuad));
+	V(getSem(direction));
 	return;
+
 }
