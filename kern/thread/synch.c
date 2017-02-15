@@ -328,34 +328,39 @@ struct rwlock * rwlock_create(const char *name)
 
 	rw->rw_lock = lock_create(rw->rwlock_name);
 	if(rw->rw_lock == NULL){
-		
+		kfree(rw->rwlock_name);		
 		kfree(rw);
 		return NULL;	
 	}
 	rw->rw_sem = sem_create(rw->rwlock_name, 0);
 	if(rw->rw_sem == NULL){
-		
+		kfree(rw->rwlock_name);		
 		kfree(rw);
 		return NULL;
 	}
 	
 	rw->rw_wchan = wchan_create(rw->rwlock_name);
-	if(rw->rw_wchan == NULL){
-		
+	if(rw->rw_wchan == NULL){	
+		kfree(rw->rwlock_name);		
 		kfree(rw);
 		return NULL;
 	}
-
+	spinlock_init(&rw->rw_spinlk);
 	rw->rw_thread = NULL;	
+	
 	return rw;
 }
 
 void rwlock_destroy(struct rwlock *rw){
 	
 	KASSERT(rw != NULL);
+	KASSERT(rw->rw_thread == NULL);
+	KASSERT(rw->rw_sem->sem_count == 0);
+	spinlock_cleanup(&rw->rw_spinlk);
 	lock_destroy(rw->rw_lock);
 	wchan_destroy(rw->rw_wchan);
 	sem_destroy(rw->rw_sem);
+	kfree(rw->rwlock_name);
 	kfree(rw);
 }	
 
@@ -364,14 +369,15 @@ void rwlock_acquire_read(struct rwlock *rw){
 	KASSERT(rw != NULL);
 	
 	spinlock_acquire(&rw->rw_lock->lk_lock);	
+	spinlock_acquire(&rw->rw_spinlk);	
 	while(rw->rw_thread != NULL){
-		 wchan_sleep(rw->rw_wchan, &rw->rw_lock->lk_lock);
+		 wchan_sleep(rw->rw_wchan, &rw->rw_spinlk);
 
 		/* Means that the writer has the lock.
 		 * The writer sets sem count to 0.
 		 */
 	}
-	spinlock_release(&rw->rw_lock->lk_lock);
+	spinlock_release(&rw->rw_spinlk);
 	V(rw->rw_sem);
 }
 
@@ -389,11 +395,11 @@ void  rwlock_acquire_write(struct rwlock *rw){
 	KASSERT(rw->rw_sem != NULL);
 	
 	
-	spinlock_acquire(&rw->rw_lock->lk_lock);
+	spinlock_acquire(&rw->rw_spinlk);
 	while(rw->rw_sem->sem_count != 0 || rw->rw_thread != NULL){
-		wchan_sleep(rw->rw_wchan, &rw->rw_lock->lk_lock);
+		wchan_sleep(rw->rw_wchan, &rw->rw_spinlk);
 	}
-	spinlock_release(&rw->rw_lock->lk_lock);
+	spinlock_release(&rw->rw_spinlk);
 	
 	lock_acquire(rw->rw_lock);
 	rw->rw_thread = curthread;
@@ -405,9 +411,9 @@ void rwlock_release_write(struct rwlock *rw){
 	KASSERT(rw != NULL);
      	KASSERT(rw->rw_thread == curthread);
 	
-	spinlock_acquire(&rw->rw_lock->lk_lock);
-	wchan_wakeone(rw->rw_wchan, &rw->rw_lock->lk_lock);
-	spinlock_release(&rw->rw_lock->lk_lock);
+	spinlock_acquire(&rw->rw_spinlk);
+	wchan_wakeone(rw->rw_wchan, &rw->rw_spinlk);
+	spinlock_release(&rw->rw_spinlk);
 	
 	lock_acquire(rw->rw_lock);
 	rw->rw_thread = NULL;

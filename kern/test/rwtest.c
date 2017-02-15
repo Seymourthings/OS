@@ -131,6 +131,7 @@ rwlocktestthread2(void *junk, unsigned long num)
 	for (i=0; i<NLOCKLOOPS; i++) {
 		kprintf_t(".");
 		rwlock_acquire_write(testrw);
+		rwlock_acquire_read(testrw);
 		random_yielder(4);
 
 		testval1 = num;
