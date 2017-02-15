@@ -369,7 +369,6 @@ void rwlock_acquire_read(struct rwlock *rw){
 	KASSERT(curthread->t_in_interrupt == false);
 	KASSERT(rw != NULL);
 	
-	spinlock_acquire(&rw->rw_lock->lk_lock);	
 	spinlock_acquire(&rw->rw_spinlk);	
 	while(rw->rw_thread != NULL){
 		 wchan_sleep(rw->rw_wchan, &rw->rw_spinlk);
