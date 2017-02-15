@@ -357,6 +357,7 @@ void rwlock_destroy(struct rwlock *rw){
 	lock_destroy(rw->rw_lock);
 	wchan_destroy(rw->rw_wchan);
 	sem_destroy(rw->rw_sem);
+	kfree(rw->rwlock_name);
 	kfree(rw);
 }	
 
