@@ -386,6 +386,7 @@ void rwlock_release_read(struct rwlock *rw){
 	KASSERT(rw->rw_sem->sem_count > 0);
 	spinlock_acquire(&rw->rw_spinlk);
 	P(rw->rw_sem);
+	wchan_wakeone(rw->rw_wchan, &rw->rw_spinlk);
 	spinlock_release(&rw->rw_spinlk);
 	
 }
