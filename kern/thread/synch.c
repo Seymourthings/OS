@@ -403,7 +403,7 @@ void  rwlock_acquire_write(struct rwlock *rw){
 	
 	
 	spinlock_acquire(&rw->rw_spinlk);
-	while(rw->count != 0 || rw->rw_thread ! = NULL){
+	while(rw->count != 0 || rw->rw_thread != NULL){
 //	while(rw->rw_sem->sem_count != 0 || rw->rw_thread != NULL){
 		wchan_sleep(rw->rw_wchan, &rw->rw_spinlk);
 	}
