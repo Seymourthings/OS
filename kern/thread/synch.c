@@ -325,19 +325,6 @@ struct rwlock * rwlock_create(const char *name)
 		kfree(rw);
 		return NULL;
 	}
-
-	rw->rw_lock = lock_create(rw->rwlock_name);
-	if(rw->rw_lock == NULL){
-		kfree(rw->rwlock_name);		
-		kfree(rw);
-		return NULL;	
-	}
-	rw->rw_sem = sem_create(rw->rwlock_name, 0);
-	if(rw->rw_sem == NULL){
-		kfree(rw->rwlock_name);		
-		kfree(rw);
-		return NULL;
-	}
 	
 	rw->rw_wchan = wchan_create(rw->rwlock_name);
 	if(rw->rw_wchan == NULL){	
@@ -345,7 +332,10 @@ struct rwlock * rwlock_create(const char *name)
 		kfree(rw);
 		return NULL;
 	}
+	
 	spinlock_init(&rw->rw_spinlk);
+	rw->reader_count = 0;
+	rw->writer_count = 0;
 	rw->rw_thread = NULL;	
 	
 	return rw;
@@ -355,11 +345,10 @@ void rwlock_destroy(struct rwlock *rw){
 	
 	KASSERT(rw != NULL);
 	KASSERT(rw->rw_thread == NULL);
-	KASSERT(rw->rw_sem->sem_count == 0);
+	KASSERT(rw->reader_count == 0);
+	KASSERT(rw->writer_count == 0);
 	spinlock_cleanup(&rw->rw_spinlk);
-	lock_destroy(rw->rw_lock);
 	wchan_destroy(rw->rw_wchan);
-	sem_destroy(rw->rw_sem);
 	kfree(rw->rwlock_name);
 	kfree(rw);
 }	
@@ -369,23 +358,23 @@ void rwlock_acquire_read(struct rwlock *rw){
 	KASSERT(rw != NULL);
 	
 	spinlock_acquire(&rw->rw_spinlk);	
-	while(rw->rw_thread != NULL){
+	while(rw->rw_thread != NULL && rw->writer_count != 0){
 		 wchan_sleep(rw->rw_wchan, &rw->rw_spinlk);
 
 		/* Means that the writer has the lock.
 		 * The writer sets sem count to 0.
 		 */
 	}
-	V(rw->rw_sem);
+	rw->reader_count++;
 	spinlock_release(&rw->rw_spinlk);
 }
 
 void rwlock_release_read(struct rwlock *rw){
 
 	KASSERT(rw != NULL);
-	KASSERT(rw->rw_sem->sem_count > 0);
+	KASSERT(rw->reader_count > 0);
 	spinlock_acquire(&rw->rw_spinlk);
-	P(rw->rw_sem);
+	rw->reader_count--;
 	wchan_wakeone(rw->rw_wchan, &rw->rw_spinlk);
 	spinlock_release(&rw->rw_spinlk);
 	
@@ -394,19 +383,14 @@ void rwlock_release_read(struct rwlock *rw){
 void  rwlock_acquire_write(struct rwlock *rw){
 	
 	KASSERT(rw != NULL);
-
-	KASSERT(rw->rw_sem != NULL);
-	
 	
 	spinlock_acquire(&rw->rw_spinlk);
-	while(rw->rw_sem->sem_count != 0 || rw->rw_thread != NULL){
+	while(rw->reader_count != 0 || rw->rw_thread != NULL){
+		rw->writer_count++;
 		wchan_sleep(rw->rw_wchan, &rw->rw_spinlk);
 	}
 	rw->rw_thread = curthread;
 	spinlock_release(&rw->rw_spinlk);
-	
-	//lock_acquire(rw->rw_lock);
-	//lock_release(rw->rw_lock);
 }
 
 void rwlock_release_write(struct rwlock *rw){
@@ -416,11 +400,8 @@ void rwlock_release_write(struct rwlock *rw){
 	
 	spinlock_acquire(&rw->rw_spinlk);
 	rw->rw_thread = NULL;
+	rw->writer_count--;
 	wchan_wakeall(rw->rw_wchan, &rw->rw_spinlk);
 	spinlock_release(&rw->rw_spinlk);
-	
-	//lock_acquire(rw->rw_lock);
-	//V(rw->rw_sem);
-	//lock_release(rw->rw_lock);
 	
 }

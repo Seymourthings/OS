@@ -26,14 +26,14 @@ static volatile unsigned long testval3;
  * Use these stubs to test your reader-writer locks.
  */
 
-static struct rwlock *testrw = NULL;
-static struct semaphore *donesem = NULL;
+//static struct rwlock *testrw = NULL;
+//static struct semaphore *donesem = NULL;
 
 
 struct spinlock status_lock;
 static bool test_status = TEST161_FAIL;
 
-static
+/*static
 bool
 failif(bool condition) {
         if (condition) {
@@ -191,13 +191,13 @@ fail2:
 	V(donesem);
 	return;
 }
-
+*/
 
 int rwtest(int nargs, char **args) {
         (void)nargs;
         (void)args;
 
-        int i, result;
+/*        int i, result;
 
         kprintf_n("Starting rwt1...\n");
         for (i=0; i<CREATELOOPS; i++) {
@@ -225,7 +225,7 @@ int rwtest(int nargs, char **args) {
                         panic("rwt1: thread_fork failed: %s\n", strerror(result));
                 }
         }
-
+*/
         success(test_status, SECRET, "rwt1");
 
         return 0;
@@ -236,7 +236,7 @@ int rwtest2(int nargs, char **args) {
         (void)nargs;
         (void)args;
 
-        int i, result;
+/*       int i, result;
 
         kprintf_n("Starting rwt2...\n");
         for (i=0; i<CREATELOOPS; i++) {
@@ -266,7 +266,7 @@ int rwtest2(int nargs, char **args) {
         }
 
         success(test_status, SECRET, "rwt2");
-
+*/
         return 0;
 }
 	
@@ -274,7 +274,7 @@ int rwtest3(int nargs, char **args) {
 	(void)nargs;
 	(void)args;
 
-	kprintf_n("Starting rwt3...\n");
+/*	kprintf_n("Starting rwt3...\n");
 	testrw = rwlock_create("testrw");
 	if(testrw == NULL){
                 panic("rwt3:rwlock_create failed\n");
@@ -284,7 +284,7 @@ int rwtest3(int nargs, char **args) {
 	rwlock_release_write(testrw);
 	if(testrw->rw_sem->sem_count == 0){
 		test_status = TEST161_SUCCESS;
-	}
+	}*/
 	success(test_status,SECRET, "rwt3");
 
 	return 0;
