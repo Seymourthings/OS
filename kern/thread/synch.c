@@ -418,18 +418,13 @@ void rwlock_release_write(struct rwlock *rw){
 	
 	spinlock_acquire(&rw->rw_spinlk);
 	rw->rw_thread = NULL;
-	if(rw->writes_waiting >= 3){
+	if(rw->writes_waiting > rw->reads_waiting){
 		wchan_wakeone(rw->write_wchan, &rw->rw_spinlk);
 	}
 
-	else if(rw->reads_waiting >= 10){
-		
-		wchan_wakeall(rw->read_wchan, &rw->rw_spinlk);
-	}
 	else{
-		wchan_wakeone(rw->write_wchan, &rw->rw_spinlk);
 	
-		wchan_wakeone(rw->read_wchan, &rw->rw_spinlk);
+		wchan_wakeall(rw->read_wchan, &rw->rw_spinlk);
 	}
 	spinlock_release(&rw->rw_spinlk);
 	
