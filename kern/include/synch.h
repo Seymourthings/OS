@@ -159,8 +159,7 @@ struct rwlock {
         char *rwlock_name;
   	struct thread *rw_thread;
 	//struct lock *rw_lock;
-	struct wchan *read_wchan;
-	struct wchan *write_wchan;
+	struct wchan *rw_wchan;
 	//struct semaphore *rw_sem;
 	struct spinlock rw_spinlk;
         volatile int reader_count;
