@@ -326,13 +326,20 @@ struct rwlock * rwlock_create(const char *name)
 		return NULL;
 	}
 	
-	rw->rw_wchan = wchan_create(rw->rwlock_name);
-	if(rw->rw_wchan == NULL){	
+	rw->read_wchan = wchan_create(rw->rwlock_name);
+	if(rw->read_wchan == NULL){	
 		kfree(rw->rwlock_name);		
 		kfree(rw);
 		return NULL;
 	}
 	
+	rw->write_wchan = wchan_create(rw->rwlock_name);
+	if(rw->write_wchan == NULL){	
+		kfree(rw->rwlock_name);		
+		kfree(rw);
+		return NULL;
+	}
+
 	spinlock_init(&rw->rw_spinlk);
 	rw->reader_count = 0;
 	rw->writer_count = 0;
@@ -346,9 +353,10 @@ void rwlock_destroy(struct rwlock *rw){
 	KASSERT(rw != NULL);
 	KASSERT(rw->rw_thread == NULL);
 	KASSERT(rw->reader_count == 0);
-//	KASSERT(rw->writer_count == 0);
+	KASSERT(rw->writer_count == 0);
 	spinlock_cleanup(&rw->rw_spinlk);
-	wchan_destroy(rw->rw_wchan);
+	wchan_destroy(rw->read_wchan);
+	wchan_destroy(rw->write_wchan);
 	kfree(rw->rwlock_name);
 	kfree(rw);
 }	
@@ -358,7 +366,7 @@ void rwlock_acquire_read(struct rwlock *rw){
 	KASSERT(rw != NULL);
 	
 	spinlock_acquire(&rw->rw_spinlk);	
-	while(rw->rw_thread != NULL && rw->writer_count != 0){
+	while(rw->rw_thread != NULL || rw->writer_count != 0){
 		 wchan_sleep(rw->rw_wchan, &rw->rw_spinlk);
 
 		/* Means that the writer has the lock.
