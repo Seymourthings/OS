@@ -385,8 +385,8 @@ void  rwlock_acquire_write(struct rwlock *rw){
 	KASSERT(rw != NULL);
 	
 	spinlock_acquire(&rw->rw_spinlk);
+	rw->writer_count++;
 	while(rw->reader_count != 0 || rw->rw_thread != NULL){
-		rw->writer_count++;
 		wchan_sleep(rw->rw_wchan, &rw->rw_spinlk);
 	}
 	rw->rw_thread = curthread;
