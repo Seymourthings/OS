@@ -356,7 +356,7 @@ void rwlock_destroy(struct rwlock *rw){
 	
 	KASSERT(rw != NULL);
 	KASSERT(rw->rw_thread == NULL);
-	KASSERT(rw->count = 0);
+	KASSERT(rw->count == 0);
 //	KASSERT(rw->rw_sem->sem_count == 0);
 	spinlock_cleanup(&rw->rw_spinlk);
 	lock_destroy(rw->rw_lock);
