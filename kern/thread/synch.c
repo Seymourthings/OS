@@ -385,9 +385,9 @@ void rwlock_release_read(struct rwlock *rw){
 	KASSERT(rw->reader_count > 0);
 	spinlock_acquire(&rw->rw_spinlk);
 	rw->reader_count--;
-	if(rw->reader_count != 0 && rw->reads_waiting != 0){
+	if(rw->reader_count > 0 && rw->reads_waiting > 0){
 	}
-	else if(rw->reader_count < 1 && rw->reads_waiting != 0){
+	else if(rw->reader_count < 1 && rw->reads_waiting > 0){
 
 
 		rw->reads_waiting = 0;
@@ -411,7 +411,7 @@ void  rwlock_acquire_write(struct rwlock *rw){
 	spinlock_acquire(&rw->rw_spinlk);
 	while(rw->reader_count > 0 || rw->rw_thread != NULL){
 		rw->reads_waiting = 1;
-		wchan_sleep(rw->read_wchan, &rw->rw_spinlk);
+		wchan_sleep(rw->write_wchan, &rw->rw_spinlk);
 	}
 
 	rw->rw_thread = curthread;
