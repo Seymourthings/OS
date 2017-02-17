@@ -415,7 +415,7 @@ void rwlock_release_write(struct rwlock *rw){
 	spinlock_acquire(&rw->rw_spinlk);
 	rw->rw_thread = NULL;
 	if(rw->reader_count > 0 && rw->rw_thread != NULL){
-		wchan_wakall(rw->rw_thread, &rw->rw_spinlk);
+		wchan_wakeall(rw->rw_wchan, &rw->rw_spinlk);
 	}
 
 	
