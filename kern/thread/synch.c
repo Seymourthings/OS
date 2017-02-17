@@ -390,7 +390,7 @@ void rwlock_release_read(struct rwlock *rw){
 	}
 	else if(rw->reader_count < 1 && rw->reads_waiting > 0){
 		rw->reads_waiting = 0;
-		wchan_wakeone(rw->rw_wchan, &rw->rw_spinlk);
+		wchan_wakeall(rw->rw_wchan, &rw->rw_spinlk);
 	//	wchan_wakeone(rw->read_wchan, &rw->rw_spinlk);
 	}
 			
@@ -424,7 +424,7 @@ void rwlock_release_write(struct rwlock *rw){
 	spinlock_acquire(&rw->rw_spinlk);
 	rw->rw_thread = NULL;
 
-	wchan_wakeone(rw->rw_wchan, &rw->rw_spinlk);
+	wchan_wakeall(rw->rw_wchan, &rw->rw_spinlk);
 //	wchan_wakeone(rw->read_wchan, &rw->rw_spinlk);
 	spinlock_release(&rw->rw_spinlk);
 	
