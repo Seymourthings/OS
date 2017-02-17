@@ -159,12 +159,12 @@ struct rwlock {
         char *rwlock_name;
   	struct thread *rw_thread;
 	//struct lock *rw_lock;
-	struct wchan *read_wchan;
-	struct wchan *write_wchan;
+	struct wchan *rw_wchan;
+	//struct wchan *write_wchan;
 	//struct semaphore *rw_sem;
 	struct spinlock rw_spinlk;
         volatile int reader_count;
-	volatile int reads_waiting;
+	//volatile int reads_waiting;
 	volatile int writes_waiting;
 	// add what you need here
         // (don't forget to mark things volatile as needed)
