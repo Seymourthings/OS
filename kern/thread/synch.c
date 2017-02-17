@@ -418,7 +418,7 @@ void rwlock_release_write(struct rwlock *rw){
 	
 	spinlock_acquire(&rw->rw_spinlk);
 	rw->rw_thread = NULL;
-	if(rw->writes_waiting > rw->reads_waiting){
+	if(rw->writes_waiting > 0){
 		wchan_wakeone(rw->write_wchan, &rw->rw_spinlk);
 	}
 
