@@ -369,6 +369,10 @@ void rwlock_acquire_read(struct rwlock *rw){
 	spinlock_acquire(&rw->rw_spinlk);
 	
 	while(rw->rw_thread != NULL || rw->writes_waiting > 0){
+		if(rw->rw_thread == NULL && rw->reads_waiting > 10){
+			rw->reads_waiting--;
+			break;
+		}
 		rw->reads_waiting++;
 		wchan_sleep(rw->read_wchan, &rw->rw_spinlk);
 	}
@@ -412,15 +416,11 @@ void rwlock_release_write(struct rwlock *rw){
 	
 	KASSERT(rw != NULL);
      	KASSERT(rw->rw_thread == curthread);
-	int i,r_waiting;
 	spinlock_acquire(&rw->rw_spinlk);
 	rw->rw_thread = NULL;
 
 	if(rw->reads_waiting > 0){
-		r_waiting = rw->reads_waiting;
-		for(i = 0; i < r_waiting; i++){
-			rw->reads_waiting--;
-		}
+		rw->reads_waiting = 0;
 		wchan_wakeall(rw->read_wchan, &rw->rw_spinlk);
 	}
 	else if(rw->writes_waiting > 0){
