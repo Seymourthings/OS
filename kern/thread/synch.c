@@ -359,6 +359,7 @@ void rwlock_destroy(struct rwlock *rw){
 	wchan_destroy(rw->read_wchan);
 	wchan_destroy(rw->write_wchan);
 	kfree(rw->rwlock_name);
+
 	kfree(rw);
 }	
 
@@ -384,27 +385,19 @@ void rwlock_release_read(struct rwlock *rw){
 	KASSERT(rw->reader_count > 0);
 	spinlock_acquire(&rw->rw_spinlk);
 	rw->reader_count--;
-	switch(rw->reads_waiting){
-		case 1:
-			if(rw->reader_count > 0){
-				break;
-			}
-			else{
-				rw->reads_waiting = 0;
-				wchan_wakeone(rw->write_wchan, 
-						&rw->rw_spinlk);
-				wchan_wakeone(rw->read_wchan,
-						&rw->rw_spinlk);
-				break;	
-			}
-		default:
-			wchan_wakeall(rw->read_wchan, &rw->rw_spinlk);
-			break;
-			
-			
-
-
+        if(rw->reader_count > 0 && rw->reads_waiting > 0){
+		//more readers still reading
 	}
+	else if(rw->reader_count < 1 && rw->reads_waiting > 0){
+		//both reads and writes waiting
+		rw->reads_waiting = 0;
+		wchan_wakeone(rw->write_wchan, &rw->rw_spinlk);
+		wchan_wakeone(rw->read_wchan, &rw->rw_spinlk);
+	}		
+	else{
+		wchan_wakeall(rw->read_wchan, &rw->rw_spinlk);
+	}		
+	
 	spinlock_release(&rw->rw_spinlk);
 	
 }
