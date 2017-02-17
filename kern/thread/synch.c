@@ -369,8 +369,7 @@ void rwlock_acquire_read(struct rwlock *rw){
 	spinlock_acquire(&rw->rw_spinlk);
 	
 	while(rw->rw_thread != NULL || rw->writes_waiting > 0){
-		if(rw->rw_thread == NULL && rw->reads_waiting > 10){
-			rw->reads_waiting--;
+		if(rw->rw_thread == NULL && rw->reads_waiting > 5){
 			break;
 		}
 		rw->reads_waiting++;
