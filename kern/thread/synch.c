@@ -383,14 +383,15 @@ void rwlock_release_read(struct rwlock *rw){
 	KASSERT(rw->reader_count > 0);
 	spinlock_acquire(&rw->rw_spinlk);
 	rw->reader_count--;
-	if(rw->reader_count < 1 && rw->reads_waiting > 0){
+	
+        if(rw->reader_count > 0 && rw->reads_waiting > 0){
+	}
+	else if(rw->reader_count < 1 && rw->reads_waiting > 0){
 		rw->reads_waiting = 0;
 		wchan_wakeone(rw->write_wchan, &rw->rw_spinlk);
 		wchan_wakeone(rw->read_wchan, &rw->rw_spinlk);
 	}
 			
-        else if(rw->reader_count > 0 && rw->reads_waiting > 0){
-	}
 	else{
 		wchan_wakeall(rw->read_wchan, &rw->rw_spinlk);
 	}		
