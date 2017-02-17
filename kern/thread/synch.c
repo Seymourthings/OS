@@ -412,12 +412,13 @@ void rwlock_release_write(struct rwlock *rw){
 	
 	KASSERT(rw != NULL);
      	KASSERT(rw->rw_thread == curthread);
-	int i;
+	int i,r_waiting;
 	spinlock_acquire(&rw->rw_spinlk);
 	rw->rw_thread = NULL;
 
 	if(rw->reads_waiting > 0){
-		for(i = 0; i < rw->reads_waiting; i++){
+		r_waiting = rw->reads_waiting;
+		for(i = 0; i < r_waiting; i++){
 			rw->reads_waiting--;
 		}
 		wchan_wakeall(rw->read_wchan, &rw->rw_spinlk);
