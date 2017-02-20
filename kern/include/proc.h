@@ -69,7 +69,12 @@ struct proc {
 
 	/* VFS */
 	struct vnode *p_cwd;		/* current working directory */
+	
+	struct thread *thread;
+	
+	int pid;
 
+	int ppid;
 	/* add more material here as needed */
 };
 
