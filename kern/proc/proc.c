@@ -82,6 +82,18 @@ proc_create(const char *name)
 	/* VFS fields */
 	proc->p_cwd = NULL;
 
+	proc->thread = NULL;
+	
+	proc->fd = 0;
+	
+	//pid shouldn't beassigned here, gets done in fork
+	
+	/* Initialize all files to null */
+	while(proc->fd < OPEN_MAX){
+		proc->file_table[proc->fd] = NULL;
+		proc->fd++;
+	}
+
 	return proc;
 }
 
@@ -104,6 +116,28 @@ proc_destroy(struct proc *proc)
 
 	KASSERT(proc != NULL);
 	KASSERT(proc != kproc);
+	
+	/*-------- U wot m8? (Desean) --------*/
+	
+	/*
+	 * Figure the fd will be changed around during file creations/deletes
+	 * so ensure it starts at the end and traverses till the beginning
+	 */
+
+	proc->fd = OPEN_MAX - 1;
+	while(proc->fd > 0){
+		if(proc->file_table[proc->fd]){
+			proc->file_table[proc->fd] = NULL;
+		}
+		proc->fd--;
+	}
+
+	/* Thread */
+	if(proc->thread){
+		proc->thread = NULL;
+	}
+ 
+	/*-------- U wot m8? (Desean) --------*/
 
 	/*
 	 * We don't take p_lock in here because we must have the only
