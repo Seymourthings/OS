@@ -38,6 +38,7 @@
 
 #include <spinlock.h>
 #include <limits.h>
+#include <file_syscall.h>
 
 struct addrspace;
 struct thread;
@@ -85,20 +86,6 @@ struct proc {
 
 };
 
-struct file_handle {
-        struct vnode *vnode;    /* actual file on disk */
-
-        struct lock *lock;      /* synchronization for file */
-	
-	struct semaphore *sem;  /* Might use this for sys_read */
-	
-        int count;              /* number of processes pointing to file */
-
-        unsigned int flags;
-
-        off_t offset;
-};
-
 /* This is the process structure for the kernel and for kernel-only threads. */
 extern struct proc *kproc;
 
@@ -122,6 +109,5 @@ struct addrspace *proc_getas(void);
 
 /* Change the address space of the current process, and return the old one. */
 struct addrspace *proc_setas(struct addrspace *);
-
 
 #endif /* _PROC_H_ */

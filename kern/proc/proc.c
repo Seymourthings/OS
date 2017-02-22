@@ -88,7 +88,10 @@ proc_create(const char *name)
 	
 	//pid shouldn't beassigned here, gets done in fork
 	
-	/* Initialize all files to null */
+	/* Initialize all files to null 
+	 * First 3 fd's should be STDIN, STDOUT, STDERR
+	 */
+
 	while(proc->fd < OPEN_MAX){
 		proc->file_table[proc->fd] = NULL;
 		proc->fd++;
