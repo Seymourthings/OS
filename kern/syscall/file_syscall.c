@@ -10,7 +10,8 @@
 #include <uio.h>
 #include <synch.h>
 #include <file_syscall.h>
-
+#include <kern/unistd.h>
+#include <copyinout.h>
 /* Write to a user file */
 
 int sys_write(int fd, void *buf, size_t buflen, int32_t *retval){
@@ -19,10 +20,7 @@ int sys_write(int fd, void *buf, size_t buflen, int32_t *retval){
 		*retval = -1;
 		return EBADF;
 	}
-
-	struct uio uio; 
-	struct iovec iovec;
-
+	
 	if(curproc->file_table[fd] == NULL){
 		*retval = -1;
 		return EBADF;
@@ -33,20 +31,27 @@ int sys_write(int fd, void *buf, size_t buflen, int32_t *retval){
 		return EBADF;
 	}
 	
+	struct uio uio;
+        struct iovec iovec;
+	int err;
+
 	lock_acquire(curproc->file_table[fd]->lock);
 
 	if (curproc->file_table[fd]->vnode->vn_refcount == 0){
 		*retval = -1;
+		lock_release(curproc->file_table[fd]->lock);
 		return EBADF;
 	}
-
-	uio_kinit(&iovec, &uio, buf, buflen, curproc->file_table[fd]->offset, UIO_WRITE);
-	int err = VOP_WRITE(curproc->file_table[fd]->vnode, &uio);
+	
+	
+	uio_uinit(&iovec, &uio, buf, buflen, curproc->file_table[fd]->offset, UIO_WRITE);
+	err = VOP_WRITE(curproc->file_table[fd]->vnode, &uio);
     
+	
 	if(err){
 		*retval = -1;
 		lock_release(curproc->file_table[fd]->lock);
-		 return err;
+		return err;
     	}
 
 	curproc->file_table[fd]->offset = uio.uio_offset;

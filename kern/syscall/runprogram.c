@@ -44,6 +44,7 @@
 #include <vfs.h>
 #include <syscall.h>
 #include <test.h>
+#include <kern/unistd.h>
 
 /*
  * Load program "progname" and start running it in usermode.
@@ -51,6 +52,9 @@
  *
  * Calls vfs_open on progname and thus may destroy it.
  */
+
+int filesys_init();
+
 int
 runprogram(char *progname)
 {
@@ -89,6 +93,8 @@ runprogram(char *progname)
 
 	/* Done with the file now. */
 	vfs_close(v);
+	
+	result = filesys_init();
 
 	/* Define the user stack in the address space */
 	result = as_define_stack(as, &stackptr);
@@ -96,7 +102,7 @@ runprogram(char *progname)
 		/* p_addrspace will go away when curproc is destroyed */
 		return result;
 	}
-
+	
 	/* Warp to user mode. */
 	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/,
 			  NULL /*userspace addr of environment*/,
@@ -107,3 +113,67 @@ runprogram(char *progname)
 	return EINVAL;
 }
 
+int filesys_init(){
+
+	/* Set STD files for first process */
+	if(!curproc->file_table[STDIN_FILENO] && 
+	   !curproc->file_table[STDOUT_FILENO] &&
+	   !curproc->file_table[STDERR_FILENO]){
+		curproc->file_table[STDIN_FILENO] = (struct file_handle *)kmalloc(sizeof(struct file_handle));	
+		curproc->file_table[STDERR_FILENO] = (struct file_handle *)kmalloc(sizeof(struct file_handle));
+		curproc->file_table[STDOUT_FILENO] = (struct file_handle *)kmalloc(sizeof(struct file_handle));
+	
+		struct vnode *v0;
+		struct vnode *v1;
+		struct vnode *v2;
+	
+		char con[] = "con:";
+		char con1[] = "con:";
+		char con2[] = "con:";
+	
+		int vfs_retval0 = vfs_open(con, O_RDONLY, 0064, &v0);
+		curproc->file_table[STDIN_FILENO]->vnode = v0;
+		curproc->file_table[STDIN_FILENO]->flags = O_RDONLY;
+		curproc->file_table[STDIN_FILENO]->count = 1;
+		curproc->file_table[STDIN_FILENO]->offset = 0;
+		curproc->file_table[STDIN_FILENO]->lock = lock_create(con);
+		
+		int vfs_retval1 = vfs_open(con1, O_WRONLY, 0064, &v1);
+                curproc->file_table[STDOUT_FILENO]->vnode = v0;
+                curproc->file_table[STDOUT_FILENO]->flags = O_WRONLY;
+                curproc->file_table[STDOUT_FILENO]->count = 1;
+                curproc->file_table[STDOUT_FILENO]->offset = 0;
+                curproc->file_table[STDOUT_FILENO]->lock = lock_create(con1);
+
+        	int vfs_retval2 = vfs_open(con2, O_WRONLY, 0064, &v2);
+	        curproc->file_table[STDERR_FILENO]->vnode = v0;
+        	curproc->file_table[STDERR_FILENO]->flags = O_WRONLY;
+	        curproc->file_table[STDERR_FILENO]->count = 1;
+	        curproc->file_table[STDERR_FILENO]->offset = 0;
+	        curproc->file_table[STDERR_FILENO]->lock = lock_create(con2);
+		
+		curproc->fd = 3;
+
+		if(vfs_retval0)
+			return vfs_retval0;
+		if(vfs_retval1)
+			return vfs_retval1;
+		if(vfs_retval2)
+			return vfs_retval2;
+        }
+	
+	while(curproc->fd < OPEN_MAX){
+		curproc->file_table[curproc->fd] = NULL;
+/*		curproc->file_table[curproc->fd] = (struct file_handle *) kmalloc(sizeof(struct file_handle));
+		curproc->file_table[curproc->fd]->vnode = NULL;
+		curproc->file_table[curproc->fd]->lock = NULL;
+		curproc->file_table[curproc->fd]->sem = NULL;
+		curproc->file_table[curproc->fd]->count = -1;
+		curproc->file_table[curproc->fd]->flags = -1;
+		curproc->file_table[curproc->fd]->offset = -1;
+*/		curproc->fd++;
+
+	}
+
+	return 0;
+}
