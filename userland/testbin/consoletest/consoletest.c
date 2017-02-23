@@ -82,7 +82,7 @@ main(int argc, char **argv)
 	char buffer[BUFFER_SIZE];
 
 	init_random();
-
+	
 	len = snsecprintf(BUFFER_SIZE, buffer, SECRET, "Able was i ere i saw elbA", "/testbin/consoletest");
 
 	how_many = (random() % 20) + 5;
