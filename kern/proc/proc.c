@@ -48,6 +48,7 @@
 #include <current.h>
 #include <addrspace.h>
 #include <vnode.h>
+#include <kern/unistd.h>
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.
@@ -86,17 +87,6 @@ proc_create(const char *name)
 	
 	proc->fd = 0;
 	
-	//pid shouldn't beassigned here, gets done in fork
-	
-	/* Initialize all files to null 
-	 * First 3 fd's should be STDIN, STDOUT, STDERR
-	 */
-
-	while(proc->fd < OPEN_MAX){
-		proc->file_table[proc->fd] = NULL;
-		proc->fd++;
-	}
-
 	return proc;
 }
 
