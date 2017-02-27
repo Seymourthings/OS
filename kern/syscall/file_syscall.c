@@ -12,6 +12,7 @@
 #include <file_syscall.h>
 #include <kern/unistd.h>
 #include <copyinout.h>
+#include <vfs.h>
 /* Write to a user file */
 
 int sys_write(int fd, void *buf, size_t buflen, int32_t *retval){
@@ -58,5 +59,59 @@ int sys_write(int fd, void *buf, size_t buflen, int32_t *retval){
    	*retval = buflen - uio.uio_resid;
 	lock_release(curproc->file_table[fd]->lock);
 	return 0;
+}
+
+int sys_open(const char *filename, int flags, int mode, int32_t *retval){
+	int fd;
+	int err;
+	char *file_dest = (char*)kmalloc(sizeof(char)*PATH_MAX);
+	size_t buflen;
+	
+	//check if filesystem is full
+	if(file_dest == NULL){
+		*retval = -1;
+		kfree(file_dest);
+		return ENOSPC;
+	}
+	//copy userlevel filename to kernel level 
+	copyinstr((const_userptr_t)filename, file_dest, PATH_MAX, &buflen);
+	
+	//check whats in filetable after stdin, stdout, stderr
+	for(fd = 3; fd < OPEN_MAX; fd++){
+		if(curproc->file_table[fd] == NULL){
+			break;
+		}
+	}
+	curproc->file_table[fd] = (struct file_handle*)kmalloc(sizeof(struct file_handle*));
+	//check if filesystem is full
+	if(fd == OPEN_MAX || curproc->file_table[fd] == NULL){
+		*retval = -1;
+		kfree(file_dest);
+		return ENFILE;
+	}
+	//open file
+	err = vfs_open(file_dest,flags,mode, &curproc->file_table[fd]->vnode);
+
+	if(err){
+		*retval = -1;	
+		kfree(file_dest);
+		return err;
+	}
+
+	
+	curproc->file_table[fd]->offset = 0;
+	curproc->file_table[fd]->flags = flags;
+	curproc->file_table[fd]->lock = lock_create(file_dest);
+	curproc->file_table[fd]->count = 1;
+	
+	*retval = fd;
+
+	kfree(file_dest);
+	return 0;
+	
+	
+	
+
+	
 }
 

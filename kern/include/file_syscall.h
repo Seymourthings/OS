@@ -22,5 +22,5 @@ struct file_handle {
 };
 
 int sys_write(int fd, void *buf, size_t buflen, int32_t *retval);
-
+int sys_open(const char *filename, int flags, int mode, int32_t *retval);
 #endif /*_FILE_SYSCALL_H_ */
