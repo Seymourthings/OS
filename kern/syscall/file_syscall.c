@@ -150,7 +150,7 @@ int sys_open(const char *filename, int flags, int mode, int32_t *retval){
 	curproc->file_table[fd]->offset = 0;
 	curproc->file_table[fd]->flags = flags;
 	curproc->file_table[fd]->lock = lock_create(file_dest);
-	curproc->file_table[fd]->count = 1;
+	curproc->file_table[fd]->count++;
 	
 	*retval = fd;
 
