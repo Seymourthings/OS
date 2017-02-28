@@ -19,7 +19,6 @@ struct file_handle {
         off_t offset;
 };
 
-int sys_open(const_useptr_t pathname, int flags, int32_t *retval);
 int sys_read(int fd, void *buf, size_t buflen, int32_t *retval);
 int sys_write(int fd, void *buf, size_t buflen, int32_t *retval);
 int sys_open(const char *filename, int flags, int mode, int32_t *retval);
