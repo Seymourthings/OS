@@ -19,8 +19,10 @@ struct file_handle {
         off_t offset;
 };
 
-int sys_open(const_useptr_t pathname, int flags, int32_t *retval);
 int sys_read(int fd, void *buf, size_t buflen, int32_t *retval);
 int sys_write(int fd, void *buf, size_t buflen, int32_t *retval);
 int sys_open(const char *filename, int flags, int mode, int32_t *retval);
+int sys_close(int fd, int32_t *retval);
+off_t sys_lseek(int fd, off_t pos, const_userptr_t whence, off_t *offset);
+
 #endif /*_FILE_SYSCALL_H_ */
