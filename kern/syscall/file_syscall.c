@@ -282,24 +282,20 @@ int sys__getcwd(void *buf, size_t buflen, int32_t *retval){
 		*retval = -1;
 		return EFAULT;
 	}
-
-	char * dir = (char *)kmalloc(sizeof(char)*buflen);
-	copyinstr((const_userptr_t)buf, dir, PATH_MAX, &buflen);
-
-	uio_uinit(&iovec, &uio, (void *)dir, buflen, (off_t)0, UIO_READ);
-
-	/* Does this null terminate the string? */
-	dir[buflen] = '\0';
+	/* Copies buf data into UIO */
+	uio_uinit(&iovec, &uio, buf, buflen-1, (off_t)0, UIO_READ);
 
 	int err = vfs_getcwd(&uio);
 	if (err) {
-		kfree(dir);
 		*retval = -1;
 		return ENOENT;
 	}
-		
-	*retval = strlen(dir);
-	kfree(dir);
+
+	//Idea is right but not null terminating string 
+	/* Does this null terminate the string? */
+	//buf[buflen] = '\0';
+	
+	*retval = strlen(buf);
 
 	return 0;
 }
