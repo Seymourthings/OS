@@ -102,7 +102,7 @@ int sys_close(int fd, int32_t *retval){
 
 int sys_read(int fd, void *buf, size_t buflen, int32_t *retval){
 	
-        if (fd < 0 || fd >= OPEN_MAX){
+        if(fd < 0 || fd >= OPEN_MAX){
                 *retval = -1;
                 return EBADF;
         }
@@ -111,8 +111,13 @@ int sys_read(int fd, void *buf, size_t buflen, int32_t *retval){
                 *retval = -1;
                 return EBADF;
         }
-	
-	/* Not using a semaphore here because processes<->threads are 1 to 1 */
+		
+		if(buf == NULL){
+			*retval = -1;
+			return EFAULT;
+		}
+
+		/* Not using a semaphore here because processes<->threads are 1 to 1 */
         if(curproc->file_table[fd]->lock == NULL){
                 *retval = -1;
                 return EBADF;
@@ -195,26 +200,26 @@ int sys_write(int fd, void *buf, size_t buflen, int32_t *retval){
 }
 
 off_t sys_lseek(int fd, off_t pos, const_userptr_t whence, off_t *offset){
-	if (fd < 0 || fd >= OPEN_MAX){
+		if (fd < 0 || fd >= OPEN_MAX){
         	*offset = -1;
 	        return EBADF;
-    	}
+		}
 
-	if(curproc->file_table[fd] == NULL){
-		*offset = -1;
-		return EBADF;
-	}
+		if(curproc->file_table[fd] == NULL){
+			*offset = -1;
+			return EBADF;
+		}
 
-	if(curproc->file_table[fd]->lock == NULL){
-		*offset = -1;
-		return EBADF;
-	}
+		if(curproc->file_table[fd]->lock == NULL){
+			*offset = -1;
+			return EBADF;
+		}
 
-	lock_acquire(curproc->file_table[fd]->lock);
+		lock_acquire(curproc->file_table[fd]->lock);
 
     	int dest;
 
-	if(curproc->file_table[fd]->vnode->vn_ops == (void *)0xdeadbeef){
+		if(curproc->file_table[fd]->vnode->vn_ops == (void *)0xdeadbeef){
 	        *offset = -1;
         	return EBADF;
     	}
@@ -232,7 +237,7 @@ off_t sys_lseek(int fd, off_t pos, const_userptr_t whence, off_t *offset){
         	return EINVAL;
     	}
 
-   	 if(!curproc->file_table[fd]->vnode->vn_refcount > 0){
+		if(!curproc->file_table[fd]->vnode->vn_refcount > 0){
         	lock_release(curproc->file_table[fd]->lock);
 	        return EINVAL;
     	}
@@ -259,11 +264,42 @@ off_t sys_lseek(int fd, off_t pos, const_userptr_t whence, off_t *offset){
 
 	bool err = VOP_ISSEEKABLE(curproc->file_table[fd]->vnode);
 	    if (!err){
-	        *offset = -1;
+	    	*offset = -1;
         	return *offset;
     	}	
 
     	*offset = curproc->file_table[fd]->offset;
     	lock_release(curproc->file_table[fd]->lock);
     	return 0;
-} 
+}
+
+int sys__getcwd(void *buf, size_t buflen, int32_t *retval){
+	
+	struct uio uio;
+	struct iovec iovec;
+
+	if(buf == NULL){
+		*retval = -1;
+		return EFAULT;
+	}
+
+	char * dir = (char *)kmalloc(sizeof(char)*buflen);
+	copyinstr((const_userptr_t)buf, dir, PATH_MAX, &buflen);
+
+	uio_uinit(&iovec, &uio, (void *)dir, buflen, (off_t)0, UIO_READ);
+
+	/* Does this null terminate the string? */
+	dir[buflen] = '\0';
+
+	int err = vfs_getcwd(&uio);
+	if (err) {
+		kfree(dir);
+		*retval = -1;
+		return ENOENT;
+	}
+		
+	*retval = strlen(dir);
+	kfree(dir);
+
+	return 0;
+}
