@@ -36,7 +36,6 @@
 #include <current.h>
 #include <syscall.h>
 #include <file_syscall.h>
-//int sys_write(int fd, void *buf, size_t buflen, int32_t *retval);
 
 /*
  * System call dispatcher.
@@ -82,6 +81,11 @@ syscall(struct trapframe *tf)
 	int callno;
 	int32_t retval;
 	int err;
+ 	
+	/* Lseek vars */
+	off_t offset = 0;
+	off_t err_ret = 0;
+
 
 	KASSERT(curthread != NULL);
 	KASSERT(curthread->t_curspl == 0);
@@ -129,14 +133,14 @@ syscall(struct trapframe *tf)
 		err = sys_write((int)tf->tf_a0, (void *)tf->tf_a1, 
 				(size_t)tf->tf_a2, &retval);
 		break;
-	    
-	    case SYS_lseek:
-	    {
-	    	off_t offset = 0;
-	    	off_t err_ret = 0;
 
-	    	err_ret = sys_lseek((int)tf->tf_a0,
-	        			 (((off_t)tf->tf_a2) << 32)+tf->tf_a3, (const_userptr_t)tf->tf_sp+16, &offset);
+	    case SYS___getcwd:
+		err = sys__getcwd((void *)tf->tf_a0, (size_t)tf->tf_a1, &retval);
+	    	break;
+    
+	    case SYS_lseek:
+	   	err_ret = sys_lseek((int)tf->tf_a0,(((off_t)tf->tf_a2) << 32)+tf->tf_a3, 
+				   (const_userptr_t)tf->tf_sp+16, &offset);
 	    	err = err_ret << 32; //higher 32 bits
 	    	if(!err){
 	    		tf->tf_v1 = (int32_t)offset;
@@ -144,8 +148,14 @@ syscall(struct trapframe *tf)
 	    	retval = (int32_t)(offset >> 32); //lower 32 bits
 
 	    	break;
-	    }
 
+	    case SYS_dup2:
+		err = sys_dup2((int)tf->tf_a0, (int)tf->tf_a1, &retval);
+		break;
+
+	    case SYS_chdir:
+		err = sys_chdir((const char *)tf->tf_a0, &retval);
+		break;
 
 	    default:
 		kprintf("Unknown syscall %d\n", callno);
