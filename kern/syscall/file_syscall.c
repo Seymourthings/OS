@@ -19,35 +19,45 @@
 /* Write to a user file */
 
 int sys_open(const char *filename, int flags, int mode, int32_t *retval){
+
 	int fd;
 	int err;
-	size_t buflen;
-	
-	if(filename == NULL){
-		*retval = -1;
-		return EFAULT;
-	}	
-
-	if(flags != O_RDONLY || flags != O_WRONLY || flags != O_RDWR){
-		*retval = -1;
-		return EINVAL;	
-	}	
-
 	char *file_dest = (char*)kmalloc(sizeof(char)*PATH_MAX);
+	size_t buflen;
+	if (filename == NULL){
+		*retval = -1;
+		kfree(file_dest);
+		return EFAULT;
+	}
+	
 	//check if filesystem is full
+	if(file_dest == NULL){
+		*retval = -1;
+		kfree(file_dest);
+		return ENOSPC;
+	}
+	
+	if(flags != O_RDONLY && flags != O_WRONLY && flags != O_RDWR){
+		*retval = -1;
+		kfree(file_dest);
+		return EINVAL;
+	}
+
+	//copy userlevel filename to kernel level 
+	copyinstr((const_userptr_t)filename, file_dest, PATH_MAX, &buflen);
+
 	if(file_dest == NULL){
 		*retval = -1;
 		kfree(file_dest);
 		return EFAULT;
 	}
-	//copy userlevel filename to kernel level 
-	copyinstr((const_userptr_t)filename, file_dest, PATH_MAX, &buflen);
-
-	if(file_dest == NULL || strlen(file_dest) == 0){
+	
+	if(strlen(file_dest) == 0){
 		*retval = -1;
-		return EFAULT;
-	}	
-
+		kfree(file_dest);
+		return EINVAL;
+	}
+	
 	//check whats in filetable after stdin, stdout, stderr
 	for(fd = 3; fd < OPEN_MAX; fd++){
 		if(curproc->file_table[fd] == NULL){
@@ -62,7 +72,7 @@ int sys_open(const char *filename, int flags, int mode, int32_t *retval){
 		curproc->file_table[fd] = (struct file_handle*)kmalloc(sizeof(struct file_handle*));
 	}	
 
-	//check if filetable is full
+	//check if filesystem is full
 	if(fd == OPEN_MAX || curproc->file_table[fd] == NULL){
 		*retval = -1;
 		kfree(file_dest);
@@ -71,11 +81,11 @@ int sys_open(const char *filename, int flags, int mode, int32_t *retval){
 
 	//open file
 	err = vfs_open(file_dest,flags,mode, &curproc->file_table[fd]->vnode);
-
+	
 	if(err){
 		*retval = -1;	
 		kfree(file_dest);
-		return err;
+		return EFAULT;
 	}
 	
 	curproc->file_table[fd]->offset = 0;
@@ -169,7 +179,11 @@ int sys_read(int fd, void *buf, size_t buflen, int32_t *retval){
 }
 
 int sys_write(int fd, void *buf, size_t buflen, int32_t *retval){
-		
+	if(buf == NULL){
+		*retval = -1;
+		return EFAULT;
+	}		
+
 	if (fd < 0 || fd >= OPEN_MAX){
 		*retval = -1;
 		return EBADF;
@@ -205,7 +219,7 @@ int sys_write(int fd, void *buf, size_t buflen, int32_t *retval){
 	if(err){
 		*retval = -1;
 		lock_release(curproc->file_table[fd]->lock);
-		return err;
+		return EFAULT;
     	}
 
 	curproc->file_table[fd]->offset = uio.uio_offset;

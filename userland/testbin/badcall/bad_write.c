@@ -31,13 +31,16 @@
  * Invalid calls to write()
  */
 
+#include <stdlib.h>
+#include <stdio.h>
 #include "test.h"
+
 
 void
 test_write(void)
 {
 	int ntests = 0, lost_points = 0;
-
+	nprintf("HEYYYYY");	
 	test_write_fd(&ntests, &lost_points);
 	test_write_buf(&ntests, &lost_points);
 
