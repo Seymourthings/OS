@@ -299,3 +299,69 @@ int sys__getcwd(void *buf, size_t buflen, int32_t *retval){
 
 	return 0;
 }
+
+int sys_dup2(int fd, int newfd, int32_t *retval){
+
+	/* Checking that both file handles exist */
+        if(fd < 0 || fd > OPEN_MAX){
+                *retval = -1;
+                return EBADF;
+        }
+	
+	if(newfd < 0 || newfd > OPEN_MAX){
+		*retval = -1;
+		return EBADF;
+	}
+
+
+	if(curproc->file_table[fd] == NULL){
+		*retval = -1;
+		return EBADF;
+	}
+	
+	if(fd == OPEN_MAX || curproc->file_table[fd] == NULL){
+		*retval = -1;
+		return EMFILE;
+	}
+
+	int err = 0;
+
+	/* If this fd has never been used, allocate space for it */
+	if(curproc->file_table[newfd] == NULL){
+		curproc->file_table[newfd] = (struct file_handle *)kmalloc(sizeof(struct file_handle*));
+	
+	} else{
+		err = sys_close(newfd, retval);
+		curproc->file_table[newfd] = curproc->file_table[fd];	
+	}
+	
+	if (err){
+		*retval = -1;
+		return EBADF;
+	}
+
+	*retval = newfd;
+	return 0;
+}
+
+int sys_chdir(const char *pathname, int32_t *retval){
+	if(pathname == NULL){
+		*retval = -1;
+		return ENOENT;	
+	}
+
+	int err;
+	char *file_dest = (char*)kmalloc(sizeof(char)*PATH_MAX);	
+	size_t buflen;
+	
+	copyinstr((const_userptr_t)pathname, file_dest, PATH_MAX, &buflen);
+	err = vfs_chdir(file_dest);
+	
+	if(err){
+		*retval = -1;
+		return EFAULT;
+	}
+
+	*retval = 0;
+	return 0;
+}
