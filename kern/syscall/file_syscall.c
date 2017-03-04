@@ -21,18 +21,33 @@
 int sys_open(const char *filename, int flags, int mode, int32_t *retval){
 	int fd;
 	int err;
-	char *file_dest = (char*)kmalloc(sizeof(char)*PATH_MAX);
 	size_t buflen;
 	
+	if(filename == NULL){
+		*retval = -1;
+		return EFAULT;
+	}	
+
+	if(flags != O_RDONLY || flags != O_WRONLY || flags != O_RDWR){
+		*retval = -1;
+		return EINVAL;	
+	}	
+
+	char *file_dest = (char*)kmalloc(sizeof(char)*PATH_MAX);
 	//check if filesystem is full
 	if(file_dest == NULL){
 		*retval = -1;
 		kfree(file_dest);
-		return ENOSPC;
+		return EFAULT;
 	}
 	//copy userlevel filename to kernel level 
 	copyinstr((const_userptr_t)filename, file_dest, PATH_MAX, &buflen);
-	
+
+	if(file_dest == NULL || strlen(file_dest) == 0){
+		*retval = -1;
+		return EFAULT;
+	}	
+
 	//check whats in filetable after stdin, stdout, stderr
 	for(fd = 3; fd < OPEN_MAX; fd++){
 		if(curproc->file_table[fd] == NULL){
@@ -47,7 +62,7 @@ int sys_open(const char *filename, int flags, int mode, int32_t *retval){
 		curproc->file_table[fd] = (struct file_handle*)kmalloc(sizeof(struct file_handle*));
 	}	
 
-	//check if filesystem is full
+	//check if filetable is full
 	if(fd == OPEN_MAX || curproc->file_table[fd] == NULL){
 		*retval = -1;
 		kfree(file_dest);
