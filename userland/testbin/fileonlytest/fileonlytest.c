@@ -116,7 +116,7 @@ main(int argc, char **argv)
     pos = lseek(fh, sizeof(writebuf), SEEK_CUR);
     if (pos != target) {
       err(1, "(odd) lseek failed: %llu != %llu", pos, target);
-    }
+   }
 
     for (j = 0; j < BUFFER_SIZE; j++) {
 			writebuf[j] = ((i * 2) + 1) * j;
