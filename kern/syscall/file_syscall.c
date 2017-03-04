@@ -38,7 +38,7 @@ int sys_open(const char *filename, int flags, int mode, int32_t *retval){
 	if(file_dest == NULL){
 		*retval = -1;
 		kfree(file_dest);
-		return EFAULT;
+		return ENOSPC;
 	}
 	//copy userlevel filename to kernel level 
 	copyinstr((const_userptr_t)filename, file_dest, PATH_MAX, &buflen);
