@@ -366,7 +366,7 @@ int sys_dup2(int fd, int newfd, int32_t *retval){
                 return EBADF;
         }
 	
-	if(newfd < 0 || newfd > OPEN_MAX){
+	if(newfd < 0 || newfd >= OPEN_MAX){
 		*retval = -1;
 		return EBADF;
 	}
@@ -405,7 +405,7 @@ int sys_dup2(int fd, int newfd, int32_t *retval){
 int sys_chdir(const char *pathname, int32_t *retval){
 	if(pathname == NULL){
 		*retval = -1;
-		return ENOENT;	
+		return EFAULT;	
 	}
 
 	int err;
@@ -413,6 +413,14 @@ int sys_chdir(const char *pathname, int32_t *retval){
 	size_t buflen;
 	
 	copyinstr((const_userptr_t)pathname, file_dest, PATH_MAX, &buflen);
+	
+/*	
+	if(strlen(file_dest) == 0){
+		*retval = -1;
+		kfree(file_dest);
+		return ENOTDIR;
+	}
+*/
 	err = vfs_chdir(file_dest);
 	
 	if(err){
