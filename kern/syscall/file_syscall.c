@@ -19,11 +19,15 @@
 /* Write to a user file */
 
 int sys_open(const char *filename, int flags, int mode, int32_t *retval){
-
+	
+	int flag_val;
 	int fd;
 	int err;
+//	int errr;
 	char *file_dest = (char*)kmalloc(sizeof(char)*PATH_MAX);
 	size_t buflen;
+//	struct vnode *vn = NULL;
+
 	if (filename == NULL){
 		*retval = -1;
 		kfree(file_dest);
@@ -36,8 +40,26 @@ int sys_open(const char *filename, int flags, int mode, int32_t *retval){
 		kfree(file_dest);
 		return ENOSPC;
 	}
+
+/*
+	errr = vfs_lookup(file_dest,&vn);
 	
-	if(flags != O_RDONLY && flags != O_WRONLY && flags != O_RDWR){
+	if(errr){
+		*retval = -1;
+		kfree(file_dest);
+		return errr;
+	}
+*/
+
+	if(flags < O_RDONLY || flags > O_NOCTTY){
+		*retval = -1;
+		kfree(file_dest);
+		return EINVAL;
+	}	
+
+	flag_val = flags & O_ACCMODE;
+		
+	if(flag_val != O_RDONLY && flag_val != O_WRONLY && flag_val != O_RDWR){
 		*retval = -1;
 		kfree(file_dest);
 		return EINVAL;
@@ -45,6 +67,8 @@ int sys_open(const char *filename, int flags, int mode, int32_t *retval){
 
 	//copy userlevel filename to kernel level 
 	copyinstr((const_userptr_t)filename, file_dest, PATH_MAX, &buflen);
+
+
 
 	if(file_dest == NULL){
 		*retval = -1;
@@ -211,7 +235,12 @@ int sys_write(int fd, void *buf, size_t buflen, int32_t *retval){
 		return EBADF;
 	}
 	
-	
+	if(curproc->file_table[fd]->flags == O_RDONLY){
+		*retval = -1;
+		lock_release(curproc->file_table[fd]->lock);
+		return EBADF;
+	}	
+
 	uio_uinit(&iovec, &uio, buf, buflen, curproc->file_table[fd]->offset, UIO_WRITE);
 	err = VOP_WRITE(curproc->file_table[fd]->vnode, &uio);
     
