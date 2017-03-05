@@ -346,7 +346,7 @@ int sys__getcwd(void *buf, size_t buflen, int32_t *retval){
 	int err = vfs_getcwd(&uio);
 	if (err) {
 		*retval = -1;
-		return ENOENT;
+		return EFAULT;
 	}
 
 	//Idea is right but not null terminating string 
