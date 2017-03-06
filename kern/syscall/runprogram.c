@@ -164,14 +164,6 @@ int filesys_init(){
 	
 	while(curproc->fd < OPEN_MAX){
 		curproc->file_table[curproc->fd] = NULL;
-/*		curproc->file_table[curproc->fd] = (struct file_handle *) kmalloc(sizeof(struct file_handle));
-		curproc->file_table[curproc->fd]->vnode = NULL;
-		curproc->file_table[curproc->fd]->lock = NULL;
-		curproc->file_table[curproc->fd]->sem = NULL;
-		curproc->file_table[curproc->fd]->count = -1;
-		curproc->file_table[curproc->fd]->flags = -1;
-		curproc->file_table[curproc->fd]->offset = -1;
-*/		curproc->fd++;
 
 	}
 
