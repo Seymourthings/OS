@@ -19,11 +19,13 @@
 /* Write to a user file */
 
 int sys_open(const char *filename, int flags, int mode, int32_t *retval){
-
+	
+	int flag_val;
 	int fd;
 	int err;
 	char *file_dest = (char*)kmalloc(sizeof(char)*PATH_MAX);
 	size_t buflen;
+
 	if (filename == NULL){
 		*retval = -1;
 		kfree(file_dest);
@@ -36,15 +38,25 @@ int sys_open(const char *filename, int flags, int mode, int32_t *retval){
 		kfree(file_dest);
 		return ENOSPC;
 	}
-	
-/*	if(flags != O_RDONLY && flags != O_WRONLY && flags != O_RDWR){
+
+	/* Are the flags within range? */
+	if(flags < O_RDONLY || flags > O_NOCTTY){
+		*retval = -1;
+		kfree(file_dest);
+		return EINVAL;
+	}	
+
+	flag_val = flags & O_ACCMODE;
+		
+	if(flag_val != O_RDONLY && flag_val != O_WRONLY && flag_val != O_RDWR){
 		*retval = -1;
 		kfree(file_dest);
 		return EINVAL;
 	}
-*/
+
 	//copy userlevel filename to kernel level 
 	copyinstr((const_userptr_t)filename, file_dest, PATH_MAX, &buflen);
+
 
 	if(file_dest == NULL){
 		*retval = -1;
@@ -89,7 +101,7 @@ int sys_open(const char *filename, int flags, int mode, int32_t *retval){
 	}
 	
 	curproc->file_table[fd]->offset = 0;
-	curproc->file_table[fd]->flags = flags;
+	curproc->file_table[fd]->flags = flag_val;
 	curproc->file_table[fd]->lock = lock_create(file_dest);
 	curproc->file_table[fd]->count++;
 	
@@ -137,12 +149,12 @@ int sys_read(int fd, void *buf, size_t buflen, int32_t *retval){
                 return EBADF;
         }
 		
-		if(buf == NULL){
-			*retval = -1;
-			return EFAULT;
-		}
+	if(buf == NULL){
+		*retval = -1;
+		return EFAULT;
+	}
 
-		/* Not using a semaphore here because processes<->threads are 1 to 1 */
+	/* Not using a semaphore here because processes<->threads are 1 to 1 */
         if(curproc->file_table[fd]->lock == NULL){
                 *retval = -1;
                 return EBADF;
@@ -159,6 +171,12 @@ int sys_read(int fd, void *buf, size_t buflen, int32_t *retval){
                 lock_release(curproc->file_table[fd]->lock);
                 return EBADF;
         }
+
+	if(curproc->file_table[fd]->flags == O_WRONLY){
+		*retval = -1;
+		lock_release(curproc->file_table[fd]->lock);
+		return EBADF;
+	}	
 
 
         uio_uinit(&iovec, &uio, buf, buflen, curproc->file_table[fd]->offset, UIO_READ);
@@ -211,7 +229,12 @@ int sys_write(int fd, void *buf, size_t buflen, int32_t *retval){
 		return EBADF;
 	}
 	
-	
+	if(curproc->file_table[fd]->flags == O_RDONLY){
+		*retval = -1;
+		lock_release(curproc->file_table[fd]->lock);
+		return EBADF;
+	}	
+
 	uio_uinit(&iovec, &uio, buf, buflen, curproc->file_table[fd]->offset, UIO_WRITE);
 	err = VOP_WRITE(curproc->file_table[fd]->vnode, &uio);
     
@@ -317,7 +340,7 @@ int sys__getcwd(void *buf, size_t buflen, int32_t *retval){
 	int err = vfs_getcwd(&uio);
 	if (err) {
 		*retval = -1;
-		return ENOENT;
+		return EFAULT;
 	}
 
 	//Idea is right but not null terminating string 
@@ -337,7 +360,7 @@ int sys_dup2(int fd, int newfd, int32_t *retval){
                 return EBADF;
         }
 	
-	if(newfd < 0 || newfd > OPEN_MAX){
+	if(newfd < 0 || newfd >= OPEN_MAX){
 		*retval = -1;
 		return EBADF;
 	}
@@ -376,7 +399,7 @@ int sys_dup2(int fd, int newfd, int32_t *retval){
 int sys_chdir(const char *pathname, int32_t *retval){
 	if(pathname == NULL){
 		*retval = -1;
-		return ENOENT;	
+		return EFAULT;	
 	}
 
 	int err;
@@ -384,6 +407,14 @@ int sys_chdir(const char *pathname, int32_t *retval){
 	size_t buflen;
 	
 	copyinstr((const_userptr_t)pathname, file_dest, PATH_MAX, &buflen);
+	
+/*	
+	if(strlen(file_dest) == 0){
+		*retval = -1;
+		kfree(file_dest);
+		return ENOTDIR;
+	}
+*/
 	err = vfs_chdir(file_dest);
 	
 	if(err){
