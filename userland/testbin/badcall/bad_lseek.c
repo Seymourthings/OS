@@ -58,7 +58,7 @@ lseek_fd_device(void)
 		report_aborted(&result);
 		return result;
 	}
-
+	
 	rv = lseek(fd, 309, SEEK_SET);
 	result = report_check(rv, errno, ESPIPE);
 
