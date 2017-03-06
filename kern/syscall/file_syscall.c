@@ -290,6 +290,8 @@ off_t sys_lseek(int fd, off_t pos, const_userptr_t whence, off_t *offset){
     	}
 
 		if(!curproc->file_table[fd]->vnode->vn_refcount > 0){
+		*offset = -1;
+
         	lock_release(curproc->file_table[fd]->lock);
 	        return EINVAL;
     	}
