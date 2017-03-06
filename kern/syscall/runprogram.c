@@ -164,7 +164,7 @@ int filesys_init(){
 	
 	while(curproc->fd < OPEN_MAX){
 		curproc->file_table[curproc->fd] = NULL;
-
+		curproc->fd++;
 	}
 
 	return 0;
