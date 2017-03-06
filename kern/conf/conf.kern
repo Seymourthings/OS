@@ -459,14 +459,14 @@ file		test/lib.c
 #                                      #
 ########################################
 
-file 		../userland/testbin/badcall/bad_open.c	
-file 		../userland/testbin/badcall/bad_close.c	
-file 		../userland/testbin/badcall/bad_read.c
-file 		../userland/testbin/badcall/bad_write.c	
-file 		../userland/testbin/badcall/bad_dup2.c
-file 		../userland/testbin/badcall/bad_chdir.c
-file 		../userland/testbin/badcall/bad_getcwd.c	
-file 		../userland/testbin/badcall/bad_lseek.c	
+#file 		../userland/testbin/badcall/bad_open.c	
+#file 		../userland/testbin/badcall/bad_close.c	
+#file 		../userland/testbin/badcall/bad_read.c
+#file 		../userland/testbin/badcall/bad_write.c	
+#file 		../userland/testbin/badcall/bad_dup2.c
+#file 		../userland/testbin/badcall/bad_chdir.c
+#file 		../userland/testbin/badcall/bad_getcwd.c	
+#file 		../userland/testbin/badcall/bad_lseek.c	
 
 optfile net	test/nettest.c
 
