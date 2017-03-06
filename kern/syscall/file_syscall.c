@@ -37,12 +37,12 @@ int sys_open(const char *filename, int flags, int mode, int32_t *retval){
 		return ENOSPC;
 	}
 	
-	if(flags != O_RDONLY && flags != O_WRONLY && flags != O_RDWR){
+/*	if(flags != O_RDONLY && flags != O_WRONLY && flags != O_RDWR){
 		*retval = -1;
 		kfree(file_dest);
 		return EINVAL;
 	}
-
+*/
 	//copy userlevel filename to kernel level 
 	copyinstr((const_userptr_t)filename, file_dest, PATH_MAX, &buflen);
 
