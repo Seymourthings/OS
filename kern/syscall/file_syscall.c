@@ -252,12 +252,12 @@ int sys_write(int fd, void *buf, size_t buflen, int32_t *retval){
 }
 
 off_t sys_lseek(int fd, off_t pos, const_userptr_t whence, off_t *offset){
-		if (fd < 0 || fd >= OPEN_MAX){
-        		*offset = -1;
-	        	return EBADF;
-		}
+	if (fd < 0 || fd >= OPEN_MAX){
+        	*offset = -1;
+	        return EBADF;
+	}
 
-		if(curproc->file_table[fd] == NULL){
+	if(curproc->file_table[fd] == NULL){
 			*offset = -1;
 			return EBADF;
 		}
@@ -289,11 +289,10 @@ off_t sys_lseek(int fd, off_t pos, const_userptr_t whence, off_t *offset){
         	return EINVAL;
     	}
 
-		if(!curproc->file_table[fd]->vnode->vn_refcount > 0){
-		*offset = -1;
-
+	if(!curproc->file_table[fd]->vnode->vn_refcount > 0){
         	lock_release(curproc->file_table[fd]->lock);
-	        return EINVAL;
+		*offset = -1;
+	       	return EINVAL;
     	}
 
 	    struct stat stat;
@@ -357,16 +356,20 @@ int sys__getcwd(void *buf, size_t buflen, int32_t *retval){
 int sys_dup2(int fd, int newfd, int32_t *retval){
 
 	/* Checking that both file handles exist */
-        if(fd < 0 || fd >= OPEN_MAX){
+        if(fd <= STDIN_FILENO || fd >= OPEN_MAX){
                 *retval = -1;
                 return EBADF;
         }
+	
+	if (fd == newfd){
+		*retval =-1;
+		return EBADF;
+	}
 	
 	if(newfd < 0 || newfd >= OPEN_MAX){
 		*retval = -1;
 		return EBADF;
 	}
-
 
 	if(curproc->file_table[fd] == NULL){
 		*retval = -1;
