@@ -86,6 +86,8 @@ struct proc {
 
 };
 
+/* Initialize Proc table */
+void  proc_init(void);
 
 /* Global Process Table */
 extern struct proc *proc_table[PROC_MAX];

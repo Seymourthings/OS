@@ -54,7 +54,8 @@
  */
 
 int filesys_init();
-//void proc_init();
+struct proc *proc_table[PROC_MAX];
+int g_pid;
 
 int
 runprogram(char *progname)
@@ -114,8 +115,13 @@ runprogram(char *progname)
 	return EINVAL;
 }
 
-//void proc_init(){
-	
+void proc_init(){
+	g_pid = 0;
+	while(g_pid < PROC_MAX){
+		proc_table[g_pid] = NULL;
+	}
+	g_pid = 0;
+}	
 
 int filesys_init(){
 

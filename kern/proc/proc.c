@@ -49,8 +49,11 @@
 #include <addrspace.h>
 #include <vnode.h>
 #include <kern/unistd.h>
+
 int pid_stack[PID_MAX / 2];
 int stack_index;
+int g_pid;
+
 /*
  * The process for the kernel; this holds all the kernel-only threads.
  */
@@ -87,6 +90,10 @@ proc_create(const char *name)
 	proc->thread = NULL;
 	
 	proc->fd = 0;
+	
+	proc->pid = 0;
+	
+	proc->ppid = 0; 
 	
 	return proc;
 }
