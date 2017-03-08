@@ -54,7 +54,7 @@
  */
 
 int filesys_init();
-void proc_init();
+//void proc_init();
 
 int
 runprogram(char *progname)
@@ -114,9 +114,8 @@ runprogram(char *progname)
 	return EINVAL;
 }
 
-void proc_init(){
+//void proc_init(){
 	
-}
 
 int filesys_init(){
 

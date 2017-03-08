@@ -94,7 +94,14 @@ extern struct proc *proc_table[PROC_MAX];
 extern int g_pid;
 
 /* A stack to keep track of */
-extern pid_stack; 
+
+extern int pid_stack[PID_MAX / 2];
+extern int stack_index;
+void pid_stack_init(void);
+bool pid_stack_isfull(void);
+bool pid_stack_isempty(void);
+bool pid_stack_push(int pid);
+int pid_stack_pop(void); 
 
 /* This is the process structure for the kernel and for kernel-only threads. */
 extern struct proc *kproc;

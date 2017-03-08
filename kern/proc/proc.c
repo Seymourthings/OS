@@ -49,7 +49,8 @@
 #include <addrspace.h>
 #include <vnode.h>
 #include <kern/unistd.h>
-
+int pid_stack[PID_MAX / 2];
+int stack_index;
 /*
  * The process for the kernel; this holds all the kernel-only threads.
  */
@@ -345,3 +346,39 @@ proc_setas(struct addrspace *newas)
 	spinlock_release(&proc->p_lock);
 	return oldas;
 }
+/* Stack Functions */
+void pid_stack_init(){
+	stack_index = 0;
+	
+
+}
+bool pid_stack_isfull(){
+	return (stack_index == (PID_MAX / 2) - 1);
+}
+
+bool pid_stack_isempty(){
+	return(stack_index == 0);
+}
+
+bool pid_stack_push(int pid){
+	if(pid_stack_isfull()){
+		return false;		
+	}
+	else{
+		pid_stack[stack_index++] = pid;
+		return true;	
+	}
+	
+}
+
+int pid_stack_pop(){
+	if(pid_stack_isempty()){
+		return -1;
+	}
+	else{
+		return pid_stack[stack_index--];
+	}
+}
+
+
+
