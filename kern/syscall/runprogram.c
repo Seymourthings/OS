@@ -95,7 +95,8 @@ runprogram(char *progname)
 
 	/* Done with the file now. */
 	vfs_close(v);
-	
+
+	proc_init();	
 	result = filesys_init();
 
 	/* Define the user stack in the address space */
@@ -119,6 +120,7 @@ void proc_init(){
 	g_pid = 0;
 	while(g_pid < PROC_MAX){
 		proc_table[g_pid] = NULL;
+		g_pid++;
 	}
 	g_pid = 0;
 }	
