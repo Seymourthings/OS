@@ -31,6 +31,7 @@
  * invalid calls to open()
  */
 
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
@@ -42,6 +43,13 @@
 
 #include "config.h"
 #include "test.h"
+
+
+int open(const char *filename, int flags, ...);
+int close(int filehandle);
+int success(int, const char *, const char *);
+
+void test_open_path(int *ntests, int *lost_points);
 
 static
 int

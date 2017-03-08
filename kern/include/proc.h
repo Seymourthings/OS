@@ -86,6 +86,16 @@ struct proc {
 
 };
 
+
+/* Global Process Table */
+extern struct proc *proc_table[PROC_MAX];
+
+/* Global Process ID */
+extern int g_pid;
+
+/* A stack to keep track of */
+extern pid_stack; 
+
 /* This is the process structure for the kernel and for kernel-only threads. */
 extern struct proc *kproc;
 

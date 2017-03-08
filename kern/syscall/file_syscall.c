@@ -356,14 +356,14 @@ int sys__getcwd(void *buf, size_t buflen, int32_t *retval){
 int sys_dup2(int fd, int newfd, int32_t *retval){
 
 	/* Checking that both file handles exist */
-        if(fd <= STDIN_FILENO || fd >= OPEN_MAX){
+    	if(fd < STDIN_FILENO || fd >= OPEN_MAX){
                 *retval = -1;
                 return EBADF;
         }
 	
 	if (fd == newfd){
 		*retval =-1;
-		return EBADF;
+		return EPERM;
 	}
 	
 	if(newfd < 0 || newfd >= OPEN_MAX){

@@ -27,7 +27,10 @@
  * SUCH DAMAGE.
  */
 
+#ifdef _KERNEL
+#else
 #include <test161/test161.h>
+#endif
 
 #define TESTFILE "badcallfile"
 #define TESTDIR  "badcalldir"

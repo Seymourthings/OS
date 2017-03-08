@@ -54,6 +54,7 @@
  */
 
 int filesys_init();
+void proc_init();
 
 int
 runprogram(char *progname)
@@ -111,6 +112,10 @@ runprogram(char *progname)
 	/* enter_new_process does not return. */
 	panic("enter_new_process returned\n");
 	return EINVAL;
+}
+
+void proc_init(){
+	
 }
 
 int filesys_init(){

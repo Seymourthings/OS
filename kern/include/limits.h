@@ -41,6 +41,7 @@
 #define NAME_MAX        __NAME_MAX
 #define PATH_MAX        __PATH_MAX
 #define ARG_MAX         __ARG_MAX
+#define PROC_MAX	__PROC_MAX
 #define PID_MIN         __PID_MIN
 #define PID_MAX         __PID_MAX
 #define PIPE_BUF        __PIPE_BUF

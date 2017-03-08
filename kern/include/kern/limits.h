@@ -73,6 +73,9 @@
  * whatever limit is set with setrlimit().
  */
 
+/* Maximum number of processes on proc table*/
+#define __PROC_MAX	32
+
 /* Min value for a process ID (that can be assigned to a user process) */
 #define __PID_MIN       2
 
