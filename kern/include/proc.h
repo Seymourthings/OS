@@ -98,6 +98,11 @@ void  proc_init(void);
 
 /* Global Process Table */
 extern struct proc *proc_table[PROC_MAX];
+/*Add to ProcTable */
+bool proc_table_append(struct proc *proc);
+/*Remove from ProcTable*/
+bool proc_table_remove(struct proc *proc);
+/* Set stack index */
 
 /* Global Process ID */
 extern int g_pid;

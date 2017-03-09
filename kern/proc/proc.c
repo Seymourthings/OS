@@ -66,7 +66,7 @@ struct proc *
 proc_create(const char *name)
 {
 	struct proc *proc;
-
+	bool err;
 	proc = kmalloc(sizeof(*proc));
 	if (proc == NULL) {
 		return NULL;
@@ -99,6 +99,12 @@ proc_create(const char *name)
 	proc->exited = false;
 	
 	proc->exitcode = -1;
+	
+	err = proc_table_append(proc);
+	if(!err){
+		kfree(proc);
+		return NULL;
+	}
 	
 	return proc;
 }
@@ -210,6 +216,33 @@ proc_destroy(struct proc *proc)
 
 	kfree(proc->p_name);
 	kfree(proc);
+}
+/*Add to ProcTable*/
+bool proc_table_append(struct proc *proc){
+	
+	int index = 0;
+	while(index < PROC_MAX){
+		if(proc_table[index] == NULL){
+			proc_table[index] = proc;
+			return true;
+			
+		}
+		index++;
+	}
+	return false;
+}
+/*Remove from ProcTable*/
+bool proc_table_remove(struct proc *proc){
+	int index = 0;
+	while(index < PROC_MAX){
+		if(proc_table[index]->pid == proc->pid){
+			proc_destroy(proc_table[index]);
+			proc_table[index] = NULL;
+			return true;
+		}
+		index++;
+	}
+	return false;
 }
 
 /*
