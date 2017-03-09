@@ -59,6 +59,7 @@ static
 void
 startup(void)
 {
+
 	if (getcwd(startpoint, sizeof(startpoint))==NULL) {
 		err(1, "getcwd (not in test dir)");
 	}
@@ -66,10 +67,11 @@ startup(void)
 	if (mkdir(testdir, 0775) < 0) {
 		err(1, "%s: mkdir", testdir);
 	}
-
+	
 	if (chdir(testdir) < 0) {
 		err(1, "%s: chdir", testdir);
 	}
+
 }
 
 /*

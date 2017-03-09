@@ -35,6 +35,7 @@
 #include <thread.h>
 #include <current.h>
 #include <syscall.h>
+#include <proc_syscall.h>
 #include <file_syscall.h>
 
 /*
@@ -155,6 +156,16 @@ syscall(struct trapframe *tf)
 
 	    case SYS_chdir:
 		err = sys_chdir((const char *)tf->tf_a0, &retval);
+		break;
+	    
+	    case SYS__exit:
+		sys_exit((int)tf->tf_a0);
+		/* manually set because void function */
+		err = 0;
+		break;
+		
+	    case SYS_getpid:
+		err = sys_getpid(&retval);
 		break;
 
 	    default:

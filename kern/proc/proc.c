@@ -52,7 +52,6 @@
 
 int pid_stack[PID_MAX / 2];
 int stack_index;
-int g_pid;
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.
@@ -94,6 +93,12 @@ proc_create(const char *name)
 	proc->pid = 0;
 	
 	proc->ppid = 0; 
+	
+	/* Setting up what I think would be defaults */
+
+	proc->exited = false;
+	
+	proc->exitcode = -1;
 	
 	return proc;
 }

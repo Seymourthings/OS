@@ -122,7 +122,7 @@ void proc_init(){
 		proc_table[g_pid] = NULL;
 		g_pid++;
 	}
-	g_pid = 0;
+	g_pid = PID_MIN;
 }	
 
 int filesys_init(){

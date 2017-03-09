@@ -413,7 +413,6 @@ int sys_chdir(const char *pathname, int32_t *retval){
 	
 	copyinstr((const_userptr_t)pathname, file_dest, PATH_MAX, &buflen);
 	
-	
 	if(strlen(file_dest) == 0){
 		*retval = -1;
 		kfree(file_dest);
@@ -429,5 +428,6 @@ int sys_chdir(const char *pathname, int32_t *retval){
 	}
 
 	*retval = 0;
+	kfree(file_dest);
 	return 0;
 }

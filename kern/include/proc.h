@@ -78,12 +78,19 @@ struct proc {
 	
 	struct thread *thread;
 
+	struct lock *lock;
+
 	volatile int fd;
 	
 	int pid;
 
 	int ppid;
 
+	/* Each process has an exit code */
+	int exitcode;
+	
+	/* A boolean for waitpid & _exit synchronization */	
+	bool exited;
 };
 
 /* Initialize Proc table */

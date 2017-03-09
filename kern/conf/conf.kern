@@ -338,7 +338,7 @@ defoption hangman
 optfile   hangman thread/hangman.c
 
 #
-# Process system
+# Process system & system calls
 #
 
 file      proc/proc.c
@@ -388,6 +388,7 @@ file      syscall/loadelf.c
 file      syscall/runprogram.c
 file      syscall/time_syscalls.c
 file	  syscall/file_syscall.c #Desean was Here
+file 	  syscall/proc_syscall.c #Desean was here
 
 #
 # Startup and initialization

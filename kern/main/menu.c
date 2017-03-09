@@ -72,6 +72,13 @@
  * It copies the program name because runprogram destroys the copy
  * it gets by passing it to vfs_open().
  */
+
+/* With extern vars, declare in header as extern, then once in any C file 
+ * without extern keyword. Then able to use that var anywhere. 
+ *  That's how we use g_sem here and in syscall/proc_syscall.c
+ */
+struct semaphore * g_sem;
+
 static
 void
 cmd_progthread(void *ptr, unsigned long nargs)
@@ -139,10 +146,15 @@ common_prog(int nargs, char **args)
 		return result;
 	}
 
+	// Semaphore created to be used btwn exit and menu
+	g_sem = sem_create("Hack", 0);
+	
 	/*
 	 * The new process will be destroyed when the program exits...
 	 * once you write the code for handling that.
 	 */
+	
+	
 
 	// Wait for all threads to finish cleanup, otherwise khu be a bit behind,
 	// especially once swapping is enabled.
@@ -925,4 +937,7 @@ menu(char *args)
 		kgets(buf, sizeof(buf));
 		menu_execute(buf, 0);
 	}
+	
+	/* Decrement sem count - syscall/proc_syscall.c */
+	P(g_sem);
 }
