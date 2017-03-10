@@ -55,7 +55,7 @@
 
 int filesys_init();
 struct proc *proc_table[PROC_MAX];
-int g_pid;
+pid_t g_pid;
 
 int
 runprogram(char *progname)
