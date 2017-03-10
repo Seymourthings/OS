@@ -93,6 +93,8 @@ struct proc {
 	bool exited;
 };
 
+
+
 /* Initialize Proc table */
 void  proc_init(void);
 
@@ -122,6 +124,9 @@ extern struct proc *kproc;
 
 /* Call once during system startup to allocate data structures. */
 void proc_bootstrap(void);
+
+/*Create a fresh process, used to be static proc.c*/
+struct proc * proc_create(const char *name);
 
 /* Create a fresh process for use by runprogram(). */
 struct proc *proc_create_runprogram(const char *name);

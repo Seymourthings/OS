@@ -61,7 +61,7 @@ struct proc *kproc;
 /*
  * Create a proc structure.
  */
-static
+
 struct proc *
 proc_create(const char *name)
 {

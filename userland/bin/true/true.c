@@ -29,6 +29,9 @@
 
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <fcntl.h>
 
 /*
  * true - succeed.
@@ -37,6 +40,16 @@
 int
 main(void)
 {
-	/* Just exit with success. */
-	exit(0);
+	int pid = fork();
+	if (pid == -1){
+		nprintf("fork failed\n");
+	}
+	else if(pid == 0){
+		nprintf("hello from child process!\n");
+	}
+	else{
+		nprintf("hello from the parent process!\n");		
+		
+	}
+	exit(0);	
 }

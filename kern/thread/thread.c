@@ -530,6 +530,7 @@ thread_fork(const char *name,
 	 * Now we clone various fields from the parent thread.
 	 */
 
+
 	/* Thread subsystem fields */
 	newthread->t_cpu = curthread->t_cpu;
 
