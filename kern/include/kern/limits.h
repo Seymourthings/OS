@@ -83,7 +83,7 @@
 #define __PID_MAX       32767
 
 /* Max open files per process */
-#define __OPEN_MAX      4
+#define __OPEN_MAX      4     /*CHANGE BACK TO 128!!!!!!!*/
 
 /* Max bytes for atomic pipe I/O -- see description in the pipe() man page */
 #define __PIPE_BUF      512
