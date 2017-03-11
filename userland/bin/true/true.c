@@ -42,13 +42,13 @@ main(void)
 {
 	int pid = fork();
 	if (pid == -1){
-		nprintf("fork failed\n");
+		printf("fork failed\n");
 	}
 	else if(pid == 0){
-		nprintf("hello from child process!\n");
+		printf("hello from child process!\n");
 	}
 	else{
-		nprintf("hello from the parent process!\n");		
+		printf("hello from the parent process!\n");		
 		
 	}
 	exit(0);	
