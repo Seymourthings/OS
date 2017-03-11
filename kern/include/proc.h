@@ -77,7 +77,7 @@ struct proc {
 	struct file_handle *file_table[OPEN_MAX];
 	
 	struct thread *thread;
-
+	
 	struct lock *lock;
 
 	volatile int fd;
@@ -93,6 +93,8 @@ struct proc {
 	bool exited;
 };
 
+
+
 /* Initialize Proc table */
 void  proc_init(void);
 
@@ -105,7 +107,7 @@ bool proc_table_remove(struct proc *proc);
 /* Set stack index */
 
 /* Global Process ID */
-extern int g_pid;
+extern pid_t g_pid;
 
 /* A stack to keep track of */
 
@@ -114,7 +116,7 @@ extern int stack_index;
 void pid_stack_init(void);
 bool pid_stack_isfull(void);
 bool pid_stack_isempty(void);
-bool pid_stack_push(int pid);
+void pid_stack_push(int pid);
 int pid_stack_pop(void); 
 
 /* This is the process structure for the kernel and for kernel-only threads. */
@@ -122,6 +124,9 @@ extern struct proc *kproc;
 
 /* Call once during system startup to allocate data structures. */
 void proc_bootstrap(void);
+
+/*Create a fresh process, used to be static proc.c*/
+struct proc * proc_create(const char *name);
 
 /* Create a fresh process for use by runprogram(). */
 struct proc *proc_create_runprogram(const char *name);

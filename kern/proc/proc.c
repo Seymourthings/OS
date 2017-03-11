@@ -61,7 +61,7 @@ struct proc *kproc;
 /*
  * Create a proc structure.
  */
-static
+
 struct proc *
 proc_create(const char *name)
 {
@@ -90,8 +90,14 @@ proc_create(const char *name)
 	
 	proc->fd = 0;
 	
-	proc->pid = 0;
-	
+	if(g_pid < PID_MAX){
+		proc->pid = g_pid++;
+	}
+	else{
+		if(!pid_stack_isempty()){
+			proc->pid = pid_stack_pop();
+		}
+	}
 	proc->ppid = 0; 
 	
 	/* Setting up what I think would be defaults */
@@ -213,7 +219,9 @@ proc_destroy(struct proc *proc)
 
 	KASSERT(proc->p_numthreads == 0);
 	spinlock_cleanup(&proc->p_lock);
-
+	
+	pid_stack_push(proc->pid);
+	
 	kfree(proc->p_name);
 	kfree(proc);
 }
@@ -405,15 +413,10 @@ bool pid_stack_isempty(){
 	return(stack_index == 0);
 }
 
-bool pid_stack_push(int pid){
+void pid_stack_push(int pid){
 	if(pid_stack_isfull()){
-		return false;		
-	}
-	else{
 		pid_stack[stack_index++] = pid;
-		return true;	
 	}
-	
 }
 
 int pid_stack_pop(){
