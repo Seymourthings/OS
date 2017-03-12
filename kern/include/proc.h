@@ -100,10 +100,14 @@ void  proc_init(void);
 
 /* Global Process Table */
 extern struct proc *proc_table[PROC_MAX];
+
+/*Global count of proc_table elements */
+extern volatile int proc_count;
+
 /*Add to ProcTable */
 bool proc_table_append(struct proc *proc);
 /*Remove from ProcTable*/
-bool proc_table_remove(struct proc *proc);
+void proc_table_remove(struct proc *proc);
 /* Set stack index */
 
 /* Global Process ID */

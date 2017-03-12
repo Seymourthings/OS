@@ -98,7 +98,8 @@ proc_create(const char *name)
 			proc->pid = pid_stack_pop();
 		}
 	}
-	proc->ppid = 0; 
+	proc->ppid = 0;
+	//proc_count++;
 	
 	/* Setting up what I think would be defaults */
 
@@ -220,6 +221,8 @@ proc_destroy(struct proc *proc)
 	KASSERT(proc->p_numthreads == 0);
 	spinlock_cleanup(&proc->p_lock);
 	
+	proc_table_remove(proc);
+//	proc_count--;
 	pid_stack_push(proc->pid);
 	
 	kfree(proc->p_name);
@@ -240,17 +243,14 @@ bool proc_table_append(struct proc *proc){
 	return false;
 }
 /*Remove from ProcTable*/
-bool proc_table_remove(struct proc *proc){
+void proc_table_remove(struct proc *proc){
 	int index = 0;
 	while(index < PROC_MAX){
 		if(proc_table[index]->pid == proc->pid){
-			proc_destroy(proc_table[index]);
 			proc_table[index] = NULL;
-			return true;
 		}
 		index++;
 	}
-	return false;
 }
 
 /*
