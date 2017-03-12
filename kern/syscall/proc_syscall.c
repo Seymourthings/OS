@@ -79,6 +79,10 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 
 	/*---Create proccess; assign ppid--- */
 	proc_child = proc_create("Proc");
+	if(proc_child == NULL){
+		*retval = -1;
+		return ENOMEM;
+	}
 	proc_child->ppid = curproc->pid;
 	proc_child->lock = lock_create("child lock");
 	/* Allocating space for address and copying into temp var */
@@ -114,3 +118,26 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 	return 0;
 }
 
+/*pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
+	int buffer;
+	struct proc *proc;
+	
+	 Checks for impossible PID's not PID's that don't exist yet 
+	if (pid < 0 || pid > PID_MAX){
+		*retval = -1;
+		return Invalid PID
+	}else{
+		proc = search process table for process 
+	}
+	
+	if(proc == NULL){
+		*retval = -1;
+		return Something
+	}
+
+	if(options != 0){
+		*retval = -1;
+		return EINVAL;
+	}
+	
+}*/
