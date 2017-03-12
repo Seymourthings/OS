@@ -8,6 +8,7 @@
 #include <kern/unistd.h>
 #include <proc_syscall.h>
 #include <kern/wait.h>
+#include <lib.h>
 
 int pid_stack[PID_MAX/2];
 int stack_index;
@@ -77,11 +78,11 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 	int err;
 
 	/*---Create proccess; assign ppid--- */
-
 	proc_child = proc_create("Proc");
 	proc_child->ppid = curproc->pid;
 	proc_child->lock = lock_create("child lock");
 	/* Allocating space for address and copying into temp var */
+	
 	err = as_copy(curproc->p_addrspace, &proc_child->p_addrspace);
 	if(err){
 		*retval = -1;
@@ -99,20 +100,12 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 	}
 	*tf_temp = *tf_parent;
 	
-	
 	int index = 0;
 	while(index < OPEN_MAX){
 		proc_child->file_table[index] = curproc->file_table[index];
-
-	
-	
 		index++;
 	};
-	
-	/* Not enough args yet , not sure which trapframe gets passed here
-	 * Ben says we copy the trapframe within sys_fork and then call thread fork
-	* Does that mean we pass the child's trapframe?
-	*/
+
 	err = thread_fork("child thread", proc_child,
 			(void*)child_entrypoint,tf_temp,(unsigned long)NULL);
 	
