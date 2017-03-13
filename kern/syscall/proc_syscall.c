@@ -175,16 +175,17 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		return 0;
 	}
 	
-/*	if(pid == 0 || pid == 1){
+	if(pid == 0){
 		*retval = pid;
 		return 0;
-	}*/
+	}
 
 	lock_acquire(proc->lock);	
 	while(!proc->exited){
 		cv_wait(proc->cv, proc->lock);
 		lock_release(proc->lock);
 	}
+
 	*retval = pid;
 	return 0;
 	
