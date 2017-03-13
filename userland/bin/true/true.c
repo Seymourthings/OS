@@ -37,10 +37,41 @@
  * true - succeed.
  */
 
+static
+void
+dowait(int nowait, int pid)
+{
+        int x;
+
+        if (pid<0) {
+                /* fork in question failed; just return */
+                return;
+        }
+        if (pid==0) {
+                /* in the fork in question we were the child; exit */
+                exit(0);
+        }
+
+        if (!nowait) {
+                if (waitpid(pid, &x, 0)<0) {
+                        printf("S");
+                }
+                else if (WIFSIGNALED(x)) {
+                	printf("O");
+		}
+                else if (WEXITSTATUS(x) != 0) {
+                	printf("S");
+		}
+        }
+}
+
+
 int
 main(void)
 {
 	int pid = fork();
+	int time_waste = 0;
+
 	if (pid == -1){
 		printf("fork failed\n");
 	}
@@ -51,5 +82,23 @@ main(void)
 		printf("hello from the parent process!\n");		
 		
 	}
+	
+	int pid2 = fork();
+	if (pid2 == -1){
+		printf("fork2 failed\n");
+	}
+	else if(pid2 == 0){
+		printf("child process 2!\n");
+	}
+	else{
+		printf("parent process 2!\n");		
+		
+	}
+
+	dowait(0, pid);
+	while(time_waste < 500000000){
+		time_waste++;
+	}
+	
 	exit(0);	
 }

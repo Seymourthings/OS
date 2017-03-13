@@ -52,6 +52,7 @@
 
 int pid_stack[PID_MAX / 2];
 int stack_index;
+pid_t g_pid;
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.
@@ -147,7 +148,7 @@ proc_destroy(struct proc *proc)
 	 * so ensure it starts at the end and traverses till the beginning
 	 */
 
-	proc->fd = OPEN_MAX - 1;
+	proc->fd = OPEN_MAX;
 	while(proc->fd > 0){
 		if(proc->file_table[proc->fd]){
 			proc->file_table[proc->fd] = NULL;
@@ -224,7 +225,6 @@ proc_destroy(struct proc *proc)
 
 	KASSERT(proc->p_numthreads == 0);
 	spinlock_cleanup(&proc->p_lock);
-	
 	proc_table_remove(proc);
 //	proc_count--;
 	pid_stack_push(proc->pid);
@@ -250,8 +250,11 @@ bool proc_table_append(struct proc *proc){
 void proc_table_remove(struct proc *proc){
 	int index = 0;
 	while(index < PROC_MAX){
-		if(proc_table[index]->pid == proc->pid){
-			proc_table[index] = NULL;
+		if(proc_table[index] != NULL){
+			if(proc_table[index]->pid == proc->pid){
+				proc_table[index] = NULL;
+				break;
+			}
 		}
 		index++;
 	}
@@ -279,6 +282,8 @@ struct proc *
 proc_create_runprogram(const char *name)
 {
 	struct proc *newproc;
+	
+	g_pid = 1;
 
 	newproc = proc_create(name);
 	if (newproc == NULL) {

@@ -55,7 +55,6 @@
 
 int filesys_init();
 struct proc *proc_table[PROC_MAX];
-pid_t g_pid;
 volatile int proc_count;
 
 int
@@ -118,12 +117,11 @@ runprogram(char *progname)
 }
 
 void proc_init(){
-	g_pid = 0;
-	while(g_pid < PROC_MAX){
-		proc_table[g_pid] = NULL;
-		g_pid++;
+	int index = 0;
+	while(index < PROC_MAX){
+		proc_table[index] = NULL;
+		index++;
 	}
-	g_pid = PID_MIN;
 	proc_count = 0;
 }	
 

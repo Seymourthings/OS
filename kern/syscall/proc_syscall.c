@@ -22,14 +22,14 @@ pid_t sys_getpid(int32_t *retval){
 
 /* Curproc exits */
 void sys_exit(int exitcode){
-	int ppid = curproc->pid;
 	
 	/*
 	 * Since this is exiting, if any children were
 	 * forked from here, we must assign them a new parent.
 	 * Assign the kproc (kernel) as the parent of each
 	 */
-
+	lock_acquire(curproc->lock);
+	int ppid = curproc->pid;
 	int index = 0;
 	while(index < PROC_MAX){
 		if(proc_table[index] != NULL){
@@ -47,10 +47,10 @@ void sys_exit(int exitcode){
 	curproc->exitcode = _MKWAIT_EXIT(exitcode);
 	curproc->exited = true;
 	
-	lock_acquire(curproc->lock);
-	cv_broadcast(curproc->cv, curproc->lock);
+	cv_broadcast(curproc->cv, curproc->lock);	
 	
 	lock_release(curproc->lock);
+	
 	/* Increment sem count - main/menu.c */	
 	V(g_sem);
 	thread_exit();
@@ -106,16 +106,20 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 		return ENOMEM;
 	}
 	*tf_temp = *tf_parent;
-	
+
 	int index = 0;
 	while(index < OPEN_MAX){
 		proc_child->file_table[index] = curproc->file_table[index];
+		if(curproc->file_table[index] != NULL){
+			lock_acquire(curproc->file_table[index]->lock);
+			curproc->file_table[index]->count++;
+			lock_release(curproc->file_table[index]->lock);
+		}	
 		index++;
 	};
-
+	
 	err = thread_fork("child thread", proc_child,
 			(void*)child_entrypoint,tf_temp,(unsigned long)NULL);
-	
 	/* The parent is the curproc here */
 	*retval = proc_child->pid;
 	return 0;
@@ -123,8 +127,10 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 
 struct proc *get_proc(pid_t pid){
 	for(int i = 0; i < PROC_MAX; i++){
-		if(pid == proc_table[i]->pid){
-			return proc_table[i];
+		if(proc_table[i] != NULL){
+			if(pid == proc_table[i]->pid){
+				return proc_table[i];
+			}
 		}
 	}
 	return NULL;
@@ -158,20 +164,9 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		return ECHILD;
 	}
 
-	err = copyout((const void *)&buffer, (userptr_t)status, sizeof(int));
-	
-	if(err){
-		*retval = -1;
-		return EFAULT;
-	}
-	
-	if(buffer){
-		*retval = -1;
-		return EFAULT;
-	}
-
 	if(proc->exited){
 		*retval = pid;
+		proc_destroy(proc);
 		return 0;
 	}
 	
@@ -185,8 +180,33 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		cv_wait(proc->cv, proc->lock);
 		lock_release(proc->lock);
 	}
+	
+	/* The parent process is waiting on the child */
+	if(curproc->pid == proc->ppid){
+		int index = 0;
+		while(index < OPEN_MAX){
+			if(curproc->file_table[index] != NULL){
+				lock_acquire(curproc->file_table[index]->lock);
+				curproc->file_table[index]->count--;
+				lock_release(curproc->file_table[index]->lock);
+			}
+		index++;
+		}
+	}	
 
+	lock_acquire(proc->lock);
+	buffer = proc->exitcode;
+	lock_release(proc->lock);
+	
+	err = copyout((const void *)&buffer, (userptr_t)status, sizeof(int));
+	
+	if(err){
+		*retval = -1;
+		return EFAULT;
+	}
+			
 	*retval = pid;
+	proc_destroy(proc);
 	return 0;
 	
 }
