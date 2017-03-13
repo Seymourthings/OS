@@ -80,6 +80,8 @@ struct proc {
 	
 	struct lock *lock;
 
+	struct cv *cv;
+
 	volatile int fd;
 	
 	int pid;

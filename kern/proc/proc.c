@@ -103,6 +103,10 @@ proc_create(const char *name)
 	
 	/* Setting up what I think would be defaults */
 
+	proc->lock = lock_create("proc lock");
+	proc->cv = cv_create("proc cv");
+
+
 	proc->exited = false;
 	
 	proc->exitcode = -1;

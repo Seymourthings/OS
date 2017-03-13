@@ -9,5 +9,6 @@ extern struct semaphore * g_sem;
 
 pid_t sys_getpid(int32_t *retval);
 void sys_exit(int exitcode);
+struct proc *get_proc(pid_t pid);
 pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval); //trapframe
-//pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval);
+pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval);

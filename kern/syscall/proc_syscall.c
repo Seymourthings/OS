@@ -9,7 +9,7 @@
 #include <proc_syscall.h>
 #include <kern/wait.h>
 #include <lib.h>
-
+#include <copyinout.h>
 int pid_stack[PID_MAX/2];
 int stack_index;
 pid_t g_pid;
@@ -46,7 +46,11 @@ void sys_exit(int exitcode){
 	
 	curproc->exitcode = _MKWAIT_EXIT(exitcode);
 	curproc->exited = true;
-
+	
+	lock_acquire(curproc->lock);
+	cv_broadcast(curproc->cv, curproc->lock);
+	
+	lock_release(curproc->lock);
 	/* Increment sem count - main/menu.c */	
 	V(g_sem);
 	thread_exit();
@@ -84,7 +88,6 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 		return ENOMEM;
 	}
 	proc_child->ppid = curproc->pid;
-	proc_child->lock = lock_create("child lock");
 	/* Allocating space for address and copying into temp var */
 	
 	err = as_copy(curproc->p_addrspace, &proc_child->p_addrspace);
@@ -118,26 +121,64 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 	return 0;
 }
 
-/*pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
+struct proc *get_proc(pid_t pid){
+	for(int i = 0; i < PROC_MAX; i++){
+		if(pid == proc_table[i]->pid){
+			return proc_table[i];
+		}
+	}
+	return NULL;
+}
+
+pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	int buffer;
+	int err;
 	struct proc *proc;
 	
-	 Checks for impossible PID's not PID's that don't exist yet 
+/*	 Checks for impossible PID's not PID's that don't exist yet */
 	if (pid < 0 || pid > PID_MAX){
 		*retval = -1;
-		return Invalid PID
+		return ESRCH;
 	}else{
-		proc = search process table for process 
+		proc = get_proc(pid);
 	}
 	
 	if(proc == NULL){
 		*retval = -1;
-		return Something
+		return ESRCH;
 	}
 
 	if(options != 0){
 		*retval = -1;
 		return EINVAL;
 	}
+	if(pid == curproc->pid){
+		*retval = -1;
+		return ECHILD;
+	}
+
+	err = copyout((const void *)&buffer, (userptr_t)status, sizeof(int));
 	
-}*/
+	if(err){
+		*retval = -1;
+		return EFAULT;
+	}
+
+	if(proc->exited){
+		*retval = pid;
+		return 0;
+	}
+	if(pid == 0){
+		*retval = pid;
+		return 0;
+	}
+
+	lock_acquire(proc->lock);	
+	while(!proc->exited){
+		cv_wait(proc->cv, proc->lock);
+		lock_release(proc->lock);
+	}
+	*retval = pid;
+	return 0;
+	
+}
