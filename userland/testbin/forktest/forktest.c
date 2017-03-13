@@ -136,9 +136,11 @@ dowait(int nowait, int pid)
 			errx(1, "waitpid");
 		}
 		else if (WIFSIGNALED(x)) {
+			nprintf("WIFSIGNALED");
 			errx(1, "pid %d: signal %d", pid, WTERMSIG(x));
 		}
 		else if (WEXITSTATUS(x) != 0) {
+			nprintf("WEXITSTATUS");
 			errx(1, "pid %d: exit %d", pid, WEXITSTATUS(x));
 		}
 	}
