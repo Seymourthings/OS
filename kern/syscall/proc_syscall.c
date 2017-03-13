@@ -152,6 +152,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		*retval = -1;
 		return EINVAL;
 	}
+	
 	if(pid == curproc->pid){
 		*retval = -1;
 		return ECHILD;
@@ -163,15 +164,21 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		*retval = -1;
 		return EFAULT;
 	}
+	
+	if(buffer){
+		*retval = -1;
+		return EFAULT;
+	}
 
 	if(proc->exited){
 		*retval = pid;
 		return 0;
 	}
-	if(pid == 0){
+	
+/*	if(pid == 0 || pid == 1){
 		*retval = pid;
 		return 0;
-	}
+	}*/
 
 	lock_acquire(proc->lock);	
 	while(!proc->exited){
