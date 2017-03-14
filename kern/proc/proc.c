@@ -150,7 +150,10 @@ proc_destroy(struct proc *proc)
 	proc->fd = OPEN_MAX - 1;
 	while(proc->fd > 0){
 		if(proc->file_table[proc->fd]){
-			proc->file_table[proc->fd] = NULL;
+			if(proc->file_table[proc->fd]->lock){
+				lock_destroy(proc->file_table[proc->fd]->lock);
+			}	
+			kfree(proc->file_table[proc->fd]);
 		}
 		proc->fd--;
 	}
@@ -228,6 +231,9 @@ proc_destroy(struct proc *proc)
 	proc_table_remove(proc);
 //	proc_count--;
 	pid_stack_push(proc->pid);
+
+	cv_destroy(proc->cv);
+	lock_destroy(proc->lock);
 	
 	kfree(proc->p_name);
 	kfree(proc);
@@ -250,10 +256,12 @@ bool proc_table_append(struct proc *proc){
 void proc_table_remove(struct proc *proc){
 	int index = 0;
 	while(index < PROC_MAX){
-		if(proc_table[index]->pid == proc->pid){
-			proc_table[index] = NULL;
+		if(proc_table[index]){
+			if(proc_table[index]->pid == proc->pid){
+				proc_table[index] = NULL;
+			}
 		}
-		index++;
+			index++;
 	}
 }
 

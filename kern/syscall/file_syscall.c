@@ -101,10 +101,13 @@ int sys_open(const char *filename, int flags, int mode, int32_t *retval){
 		return EFAULT;
 	}
 	
+	curproc->file_table[fd]->lock = lock_create(file_dest);
+	
+	lock_acquire(curproc->file_table[fd]->lock);
 	curproc->file_table[fd]->offset = 0;
 	curproc->file_table[fd]->flags = flag_val;
-	curproc->file_table[fd]->lock = lock_create(file_dest);
 	curproc->file_table[fd]->count++;
+	lock_release(curproc->file_table[fd]->lock);
 	
 	*retval = fd;
 
@@ -129,10 +132,14 @@ int sys_close(int fd, int32_t *retval){
 		*retval = -1;
 		return EBADF;
 	}
-
-	vfs_close(curproc->file_table[fd]->vnode);
-	
-	curproc->file_table[fd]->count--;
+	if(curproc->file_table[fd]->count == 1){
+		vfs_close(curproc->file_table[fd]->vnode);
+		//lock_destroy(curproc->file_table[fd]->lock);
+	}else if (curproc->file_table[fd]->count > 1){
+		lock_acquire(curproc->file_table[fd]->lock);	
+		curproc->file_table[fd]->count--;
+		lock_release(curproc->file_table[fd]->lock);
+	}
 
 	*retval = 0;
 	return 0;
