@@ -41,14 +41,15 @@ void sys_exit(int exitcode){
 		
 		index++;
 	}
+		
+	lock_acquire(curproc->lock);
 	
 	curproc->exitcode = _MKWAIT_EXIT(exitcode);
 	curproc->exited = true;
-	
-	lock_acquire(curproc->lock);
 	cv_broadcast(curproc->cv, curproc->lock);
 	
 	lock_release(curproc->lock);
+	
 	/* Increment sem count - main/menu.c */	
 	V(g_sem);
 	thread_exit();
@@ -155,9 +156,11 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		*retval = -1;
 		return ECHILD;
 	}
-
-	err = copyout((const void *)&buffer, (userptr_t)status, sizeof(int));
 	
+	lock_acquire(curproc->lock);
+	err = copyout((const void *)&buffer, (userptr_t)status, sizeof(int));
+	lock_release(curproc->lock);	
+
 	if(err){
 		*retval = -1;
 		return EFAULT;
@@ -181,9 +184,9 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	lock_acquire(proc->lock);	
 	while(!proc->exited){
 		cv_wait(proc->cv, proc->lock);
-		lock_release(proc->lock);
 	}
 	*retval = pid;
+	lock_release(proc->lock);
 	return 0;
 	
 }
