@@ -53,6 +53,7 @@
 int pid_stack[PID_MAX / 2];
 int stack_index;
 pid_t g_pid;
+struct proc *program;
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.
@@ -112,6 +113,8 @@ proc_create(const char *name)
 	
 	proc->exitcode = -1;
 	
+	/* If file handle exists but lock, etc isn't creaeted, create it*/
+		
 	err = proc_table_append(proc);
 	if(!err){
 		kfree(proc);
@@ -148,13 +151,27 @@ proc_destroy(struct proc *proc)
 	 * so ensure it starts at the end and traverses till the beginning
 	 */
 
+	/* Find it's parent & decrement all it's file_handle counts' */
+	struct proc *parent_proc = get_parent_proc(proc->ppid);
+	int index = 0;
+	while(index < OPEN_MAX){
+		if(parent_proc->file_table[index] != NULL){
+			if(parent_proc->file_table[index]->count){
+				lock_acquire(parent_proc->lock);
+				parent_proc->file_table[index]->count--;
+				lock_release(parent_proc->lock);	
+			}
+		}
+		index++;
+	}
 	proc->fd = OPEN_MAX;
 	while(proc->fd > 0){
-		if(proc->file_table[proc->fd]){
-			proc->file_table[proc->fd] = NULL;
+		if(proc->file_table[proc->fd] != NULL){
+			kfree(proc->file_table[proc->fd]);
 		}
 		proc->fd--;
 	}
+
 
 	/* Thread */
 	if(proc->thread){
@@ -228,10 +245,26 @@ proc_destroy(struct proc *proc)
 	proc_table_remove(proc);
 //	proc_count--;
 	pid_stack_push(proc->pid);
+			
+	lock_destroy(proc->lock);
+	cv_destroy(proc->cv);
 	
 	kfree(proc->p_name);
 	kfree(proc);
 }
+
+/* Find parent process */
+struct proc * get_parent_proc(pid_t ppid){
+	int index = 0;
+	while(index < OPEN_MAX){
+		if(ppid == proc_table[index]->pid){
+			return proc_table[index];
+		}
+		index++;
+	}
+	return NULL;
+}
+
 /*Add to ProcTable*/
 bool proc_table_append(struct proc *proc){
 	
@@ -289,6 +322,8 @@ proc_create_runprogram(const char *name)
 	if (newproc == NULL) {
 		return NULL;
 	}
+
+	program = newproc;
 
 	/* VM fields */
 

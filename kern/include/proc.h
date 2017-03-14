@@ -95,10 +95,13 @@ struct proc {
 	bool exited;
 };
 
-
+/*Global var to keep track of prog running in gdb */
+extern struct proc * program;
 
 /* Initialize Proc table */
 void  proc_init(void);
+
+struct proc * get_parent_proc(pid_t ppid);
 
 /* Global Process Table */
 extern struct proc *proc_table[PROC_MAX];

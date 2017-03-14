@@ -95,10 +95,10 @@ runprogram(char *progname)
 
 	/* Done with the file now. */
 	vfs_close(v);
-
-	proc_init();	
+	
+	proc_init();
 	result = filesys_init();
-
+	
 	/* Define the user stack in the address space */
 	result = as_define_stack(as, &stackptr);
 	if (result) {
@@ -122,15 +122,13 @@ void proc_init(){
 		proc_table[index] = NULL;
 		index++;
 	}
+	index = 0;
 	proc_count = 0;
 }	
 
 int filesys_init(){
 
 	/* Set STD files for first process */
-	if(!curproc->file_table[STDIN_FILENO] && 
-	   !curproc->file_table[STDOUT_FILENO] &&
-	   !curproc->file_table[STDERR_FILENO]){
 		curproc->file_table[STDIN_FILENO] = (struct file_handle *)kmalloc(sizeof(struct file_handle));	
 		curproc->file_table[STDERR_FILENO] = (struct file_handle *)kmalloc(sizeof(struct file_handle));
 		curproc->file_table[STDOUT_FILENO] = (struct file_handle *)kmalloc(sizeof(struct file_handle));
@@ -172,8 +170,6 @@ int filesys_init(){
 			return vfs_retval1;
 		if(vfs_retval2)
 			return vfs_retval2;
-        }
-	
 	while(curproc->fd < OPEN_MAX){
 		curproc->file_table[curproc->fd] = NULL;
 		curproc->fd++;

@@ -28,15 +28,11 @@ void sys_exit(int exitcode){
 	 * forked from here, we must assign them a new parent.
 	 * Assign the kproc (kernel) as the parent of each
 	 */
-	lock_acquire(curproc->lock);
-	int ppid = curproc->pid;
 	int index = 0;
 	while(index < PROC_MAX){
 		if(proc_table[index] != NULL){
-			if(proc_table[index]->ppid == ppid){
-				lock_acquire(proc_table[index]->lock);
-				proc_table[index]->ppid = kproc->pid;
-				lock_release(proc_table[index]->lock);
+			if(proc_table[index]->ppid == curproc->pid){
+				proc_table[index]->ppid = program->pid;
 			}
 		
 		}
@@ -44,13 +40,12 @@ void sys_exit(int exitcode){
 		index++;
 	}
 	
+	lock_acquire(curproc->lock);
 	curproc->exitcode = _MKWAIT_EXIT(exitcode);
 	curproc->exited = true;
-	
 	cv_broadcast(curproc->cv, curproc->lock);	
-	
-	lock_release(curproc->lock);
-	
+	lock_release(curproc->lock);	
+
 	/* Increment sem count - main/menu.c */	
 	V(g_sem);
 	thread_exit();
@@ -178,6 +173,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	lock_acquire(proc->lock);	
 	while(!proc->exited){
 		cv_wait(proc->cv, proc->lock);
+		buffer = proc->exitcode;
 		lock_release(proc->lock);
 	}
 	
@@ -185,7 +181,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	if(curproc->pid == proc->ppid){
 		int index = 0;
 		while(index < OPEN_MAX){
-			if(curproc->file_table[index] != NULL){
+			if(curproc->file_table[index]->lock != NULL){
 				lock_acquire(curproc->file_table[index]->lock);
 				curproc->file_table[index]->count--;
 				lock_release(curproc->file_table[index]->lock);
@@ -194,9 +190,6 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		}
 	}	
 
-	lock_acquire(proc->lock);
-	buffer = proc->exitcode;
-	lock_release(proc->lock);
 	
 	err = copyout((const void *)&buffer, (userptr_t)status, sizeof(int));
 	
@@ -204,7 +197,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		*retval = -1;
 		return EFAULT;
 	}
-			
+				
 	*retval = pid;
 	proc_destroy(proc);
 	return 0;

@@ -95,6 +95,7 @@ main(void)
 		
 	}
 
+	dowait(0, pid2);
 	dowait(0, pid);
 	while(time_waste < 500000000){
 		time_waste++;
