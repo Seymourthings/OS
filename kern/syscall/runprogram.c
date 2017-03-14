@@ -130,9 +130,6 @@ void proc_init(){
 int filesys_init(){
 
 	/* Set STD files for first process */
-	if(!curproc->file_table[STDIN_FILENO] && 
-	   !curproc->file_table[STDOUT_FILENO] &&
-	   !curproc->file_table[STDERR_FILENO]){
 		curproc->file_table[STDIN_FILENO] = (struct file_handle *)kmalloc(sizeof(struct file_handle));	
 		curproc->file_table[STDERR_FILENO] = (struct file_handle *)kmalloc(sizeof(struct file_handle));
 		curproc->file_table[STDOUT_FILENO] = (struct file_handle *)kmalloc(sizeof(struct file_handle));
@@ -174,7 +171,6 @@ int filesys_init(){
 			return vfs_retval1;
 		if(vfs_retval2)
 			return vfs_retval2;
-        }
 	
 	while(curproc->fd < OPEN_MAX){
 		curproc->file_table[curproc->fd] = NULL;
