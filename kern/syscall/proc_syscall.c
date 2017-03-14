@@ -22,8 +22,6 @@ pid_t sys_getpid(int32_t *retval){
 
 /* Curproc exits */
 void sys_exit(int exitcode){
-	int ppid = curproc->pid;
-	
 	/*
 	 * Since this is exiting, if any children were
 	 * forked from here, we must assign them a new parent.
@@ -33,9 +31,9 @@ void sys_exit(int exitcode){
 	int index = 0;
 	while(index < PROC_MAX){
 		if(proc_table[index] != NULL){
-			if(proc_table[index]->ppid == ppid){
+			if(proc_table[index]->ppid == curproc->pid){
 				lock_acquire(proc_table[index]->lock);
-				proc_table[index]->ppid = kproc->pid;
+				proc_table[index]->ppid = 1;
 				lock_release(proc_table[index]->lock);
 			}
 		
