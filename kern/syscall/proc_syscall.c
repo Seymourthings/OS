@@ -163,36 +163,30 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		return ECHILD;
 	}
 	
-	lock_acquire(curproc->lock);
-	err = copyout((const void *)&buffer, (userptr_t)status, sizeof(int));
-	lock_release(curproc->lock);	
-
-	if(err){
-		*retval = -1;
-		return EFAULT;
-	}
 	
-	/*if(buffer){
-		*retval = -1;
-		return EFAULT;
-	}*/
-
 	if(proc->exited){
+		lock_acquire(proc->lock);
 		*retval = pid;
+		lock_release(proc->lock);
 		return 0;
-	}
-	
-/*	if(pid == 0 || pid == 1){
-		*retval = pid;
-		return 0;
-	}*/
+	}	
 
 	lock_acquire(proc->lock);	
 	while(!proc->exited){
 		cv_wait(proc->cv, proc->lock);
 	}
-	*retval = pid;
+	
+	buffer = curproc->exitcode;
+	err = copyout((const void *)&buffer, (userptr_t)status, sizeof(int));
+	if(err){
+		*retval = -1;
+		return EFAULT;
+	}
 	lock_release(proc->lock);
+	
+	proc_destroy(proc);
+	
+	*retval = pid;
 	return 0;
 	
 }
