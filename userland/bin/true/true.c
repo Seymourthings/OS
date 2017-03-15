@@ -32,15 +32,51 @@
 #include <string.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <err.h>
 
 /*
  * true - succeed.
  */
+static
+void
+dowait(int nowait, int pid)
+{
+        int x;
+        int pid2;
+
+        if (pid<0) {
+                /* fork in question failed; just return */
+                return;
+        }
+        if (pid==0) {
+                /* in the fork in question we were the child; exit */
+                exit(0);
+        }
+
+        if (!nowait) {
+                pid2 = waitpid(pid, &x, 0);
+                printf("PID is: %d /n", pid2);
+		if (pid2<0) {
+                        printf("Failing at waitpid if: With PID: %d", pid2);
+                        errx(1, "waitpid");
+                }
+                else if (WIFSIGNALED(x)) {
+                        printf("Failing at waitpid 1st ELSE if");
+                        errx(1, "pid %d: signal %d", pid, WTERMSIG(x));
+                }
+                else if (WEXITSTATUS(x) != 0) {
+                        printf("Failing at waitpid 2nd ELSE if");
+                        errx(1, "pid %d: exit %d", pid, WEXITSTATUS(x));
+                }
+        }
+}
+
 
 int
 main(void)
 {
 	int pid = fork();
+	int nowait = 0;
 	if (pid == -1){
 		printf("fork failed\n");
 	}
@@ -48,8 +84,11 @@ main(void)
 		printf("hello from child process!\n");
 	}
 	else{
-		printf("hello from the parent process!\n");		
+		printf("hello from the parent process ---- %d!\n", pid);		
 		
 	}
-	exit(0);	
+	
+	dowait(nowait,pid);
+	
+//	exit(0);	
 }
