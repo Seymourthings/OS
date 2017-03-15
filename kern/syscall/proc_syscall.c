@@ -147,14 +147,16 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		*retval = -1;
 		return ESRCH;
 	}else{
-		lock_acquire(curproc->lock);
 		proc = get_proc(pid);
-		lock_release(curproc->lock);
 	}
 	
 	if(proc == NULL){
 		*retval = -1;
 		return ESRCH;
+	}
+	if(status == NULL){
+		*retval = -1;
+		return EFAULT;
 	}
 
 	if(options != 0){
@@ -166,37 +168,39 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		*retval = -1;
 		return ECHILD;
 	}
-	
-	lock_acquire(curproc->lock);
-	err = copyout((const void *)&buffer, (userptr_t)status, sizeof(int));
-	lock_release(curproc->lock);	
 
-	if(err){
-		*retval = -1;
-		return EFAULT;
-	}
+	
+	
 	
 	/*if(buffer){
 		*retval = -1;
 		return EFAULT;
 	}*/
 
-	if(proc->exited){
-		*retval = pid;
-		return 0;
+	while(!proc->exited){
+
+		lock_acquire(proc->lock);	
+		cv_wait(proc->cv, proc->lock);
+
+		lock_release(proc->lock);
 	}
+	
+
 	
 /*	if(pid == 0 || pid == 1){
 		*retval = pid;
 		return 0;
 	}*/
 
-	lock_acquire(proc->lock);	
-	while(!proc->exited){
-		cv_wait(proc->cv, proc->lock);
+	err = copyout((const void *)&buffer, (userptr_t)status, sizeof(int));
+
+	if(err){
+		*retval = -1;
+		return EFAULT;
 	}
+
 	*retval = pid;
-	lock_release(proc->lock);
+	proc_destroy(proc);	
 	return 0;
 	
 }
