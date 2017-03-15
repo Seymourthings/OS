@@ -121,6 +121,7 @@ void
 dowait(int nowait, int pid)
 {
 	int x;
+	int pid2;
 
 	if (pid<0) {
 		/* fork in question failed; just return */
@@ -132,13 +133,17 @@ dowait(int nowait, int pid)
 	}
 
 	if (!nowait) {
-		if (waitpid(pid, &x, 0)<0) {
+		pid2 = waitpid(pid, &x, 0);
+		if (pid2<0) {
+			printf("Failing at waitpid if: With PID: %d", pid2);
 			errx(1, "waitpid");
 		}
 		else if (WIFSIGNALED(x)) {
+			printf("Failing at waitpid 1st ELSE if");	
 			errx(1, "pid %d: signal %d", pid, WTERMSIG(x));
 		}
 		else if (WEXITSTATUS(x) != 0) {
+			printf("Failing at waitpid 2nd ELSE if");	
 			errx(1, "pid %d: exit %d", pid, WEXITSTATUS(x));
 		}
 	}
@@ -301,6 +306,8 @@ main(int argc, char *argv[])
 	write(STDERR_FILENO, expected, strlen(expected));
 
 	test(nowait);
+	printf("After no wait but before nprintf");
+	nprintf("After no wait");
 
 	warnx("Complete.");
 	return 0;

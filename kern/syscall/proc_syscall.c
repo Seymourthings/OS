@@ -27,23 +27,17 @@ void sys_exit(int exitcode){
 	 * forked from here, we must assign them a new parent.
 	 * Assign the kproc (kernel) as the parent of each
 	 */
-
+		 
+	lock_acquire(curproc->lock);
 	int index = 0;
 	while(index < PROC_MAX){
 		if(proc_table[index] != NULL){
 			if(proc_table[index]->ppid == curproc->pid){
-				lock_acquire(proc_table[index]->lock);
 				proc_table[index]->ppid = 1;
-				lock_release(proc_table[index]->lock);
 			}
-		
 		}
-		
 		index++;
-	}
-		
-	lock_acquire(curproc->lock);
-	
+	}	
 	curproc->exitcode = _MKWAIT_EXIT(exitcode);
 	curproc->exited = true;
 	cv_broadcast(curproc->cv, curproc->lock);
@@ -86,7 +80,9 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 		*retval = -1;
 		return ENOMEM;
 	}
+	lock_acquire(proc_child->lock);
 	proc_child->ppid = curproc->pid;
+	lock_release(proc_child->lock);
 	/* Allocating space for address and copying into temp var */
 	
 	err = as_copy(curproc->p_addrspace, &proc_child->p_addrspace);
@@ -108,20 +104,28 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 	
 	int index = 0;
 	while(index < OPEN_MAX){
+		if(curproc->file_table[index] != NULL){
+			lock_acquire(curproc->file_table[index]->lock);
+			curproc->file_table[index]->count++;
+			lock_release(curproc->file_table[index]->lock);
+		}
 		proc_child->file_table[index] = curproc->file_table[index];
 		index++;
 	};
-
+	
 	err = thread_fork("child thread", proc_child,
 			(void*)child_entrypoint,tf_temp,(unsigned long)NULL);
 	
 	/* The parent is the curproc here */
+	lock_acquire(curproc->lock);
 	*retval = proc_child->pid;
+	lock_release(curproc->lock);
 	return 0;
 }
 
 struct proc *get_proc(pid_t pid){
-	for(int i = 0; i < PROC_MAX; i++){
+	int i = 0;
+	for(; i < PROC_MAX; i++){
 		if(pid == proc_table[i]->pid){
 			return proc_table[i];
 		}
@@ -139,7 +143,9 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		*retval = -1;
 		return ESRCH;
 	}else{
+		lock_acquire(curproc->lock);
 		proc = get_proc(pid);
+		lock_release(curproc->lock);
 	}
 	
 	if(proc == NULL){
@@ -166,10 +172,10 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		return EFAULT;
 	}
 	
-	if(buffer){
+	/*if(buffer){
 		*retval = -1;
 		return EFAULT;
-	}
+	}*/
 
 	if(proc->exited){
 		*retval = pid;
