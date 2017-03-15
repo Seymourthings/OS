@@ -98,14 +98,15 @@ proc_create(const char *name)
 			proc->pid = pid_stack_pop();
 		}
 	}
+	
 	proc->ppid = 0;
+
 	//proc_count++;
 	
 	/* Setting up what I think would be defaults */
 
 	proc->lock = lock_create("proc lock");
 	proc->cv = cv_create("proc cv");
-
 
 	proc->exited = false;
 	

@@ -134,6 +134,7 @@ int sys_close(int fd, int32_t *retval){
 	}
 	if(curproc->file_table[fd]->count == 1){
 		vfs_close(curproc->file_table[fd]->vnode);
+		curproc->file_table[fd]->count= 0;
 		//lock_destroy(curproc->file_table[fd]->lock);
 	}else if (curproc->file_table[fd]->count > 1){
 		lock_acquire(curproc->file_table[fd]->lock);	
