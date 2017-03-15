@@ -1,9 +1,6 @@
 #include <types.h>
 #include <kern/errno.h>
 #include <spl.h>
-#include <kern/fcntl.h>
-#include <vfs.h>
-#include <syscall.h>
 #include <proc.h>
 #include <current.h>
 #include <addrspace.h>
@@ -13,7 +10,6 @@
 #include <kern/wait.h>
 #include <lib.h>
 #include <copyinout.h>
-
 int pid_stack[PID_MAX/2];
 int stack_index;
 pid_t g_pid;
@@ -33,15 +29,18 @@ void sys_exit(int exitcode){
 	 */
 		 
 	lock_acquire(curproc->lock);
+
 	int index = 0;
 	while(index < PROC_MAX){
 		if(proc_table[index] != NULL){
 			if(proc_table[index]->ppid == curproc->pid){
-				proc_table[index]->ppid = 0;
+				proc_table[index]->ppid = -1;
 			}
 		}
 		index++;
-	}	
+	}
+
+	
 	curproc->exitcode = _MKWAIT_EXIT(exitcode);
 	curproc->exited = true;
 	cv_broadcast(curproc->cv, curproc->lock);
@@ -137,7 +136,7 @@ struct proc *get_proc(pid_t pid){
 	return NULL;
 }
 
-pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
+pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){		
 	int buffer;
 	int err;
 	struct proc *proc;
@@ -166,85 +165,32 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		*retval = -1;
 		return ECHILD;
 	}
-	
-	
+		
+
 	if(proc->exited){
-		lock_acquire(proc->lock);
 		*retval = pid;
-		lock_release(proc->lock);
 		return 0;
-	}	
+	}
+	
 
 	lock_acquire(proc->lock);	
 	while(!proc->exited){
 		cv_wait(proc->cv, proc->lock);
 	}
-	
-	buffer = curproc->exitcode;
-	err = copyout((const void *)&buffer, (userptr_t)status, sizeof(int));
+
+
+	lock_release(proc->lock);
+
+
+	buffer = proc->exitcode;
+	err = copyout((const char*)&buffer, (userptr_t)status, sizeof(int));
+
 	if(err){
 		*retval = -1;
 		return EFAULT;
 	}
-	lock_release(proc->lock);
-	
-//	proc_destroy(proc);
 	
 	*retval = pid;
 	return 0;
 	
 }
-	
-
-
-/*sys_execv*/
-
-int sys_execv(char* progname, char** args, int *retval){
-	struct addrspace *as;
-	struct vnode *v;
-	vaddr_t entrypoint, stackptr;
-	int result;
-	(void)args;	
-	result = vfs_open(progname, O_RDONLY, 0, &v);
-	if (result) {
-		return result;
-	}
-	
-	as = as_create();
-	if (as == NULL) {
-		vfs_close(v);
-		return ENOMEM;
-	}
-	
-	proc_setas(as);
-	as_activate();
-	
-	result = load_elf(v, &entrypoint);
-	if (result) {
-		/* p_addrspace will go away when curproc is destroyed */
-		vfs_close(v);
-		return result;
-	}
-	
-	result = as_define_stack(as, &stackptr);
-	if (result) {
-		/* p_addrspace will go away when curproc is destroyed */
-		return result;
-	}
-	
-	
-	/* Done with the file now. */
-	vfs_close(v);
-	*retval = 0;
-	
-	/* Warp to user mode. */
-	//TO DO change args
-	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/,
-			  NULL /*userspace addr of environment*/,
-			  stackptr, entrypoint);
-	
-	/* enter_new_process does not return. */
-	panic("enter_new_process returned\n");
-	return EINVAL;
-}
-
