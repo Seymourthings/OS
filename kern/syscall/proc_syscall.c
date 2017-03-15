@@ -34,7 +34,7 @@ void sys_exit(int exitcode){
 	while(index < PROC_MAX){
 		if(proc_table[index] != NULL){
 			if(proc_table[index]->ppid == curproc->pid){
-				proc_table[index]->ppid = -1;
+				proc_table[index]->ppid = 0;
 			}
 		}
 		index++;
@@ -167,11 +167,11 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	}
 		
 
-	if(proc->exited){
-		*retval = pid;
-		return 0;
-	}
-	
+	if(curproc->pid != proc->ppid){
+				
+		*retval = -1;
+		return ECHILD;
+	}	
 
 	lock_acquire(proc->lock);	
 	while(!proc->exited){
@@ -179,7 +179,6 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	}
 
 
-	lock_release(proc->lock);
 
 
 	buffer = proc->exitcode;
@@ -191,6 +190,8 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	}
 	
 	*retval = pid;
+
+	lock_release(proc->lock);
 	return 0;
 	
 }
