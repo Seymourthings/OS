@@ -33,7 +33,7 @@ void sys_exit(int exitcode){
 	while(index < PROC_MAX){
 		if(proc_table[index] != NULL){
 			if(proc_table[index]->ppid == curproc->pid){
-				proc_table[index]->ppid = 1;
+				proc_table[index]->ppid = 0;
 			}
 		}
 		index++;
