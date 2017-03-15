@@ -1,5 +1,6 @@
 #include <types.h>
 #include <kern/errno.h>
+#include <kern/fcntl.h>
 #include <spl.h>
 #include <proc.h>
 #include <current.h>
@@ -10,6 +11,9 @@
 #include <kern/wait.h>
 #include <lib.h>
 #include <copyinout.h>
+#include <vfs.h>
+#include <kern/syscall.h>
+#include <syscall.h>
 int pid_stack[PID_MAX/2];
 int stack_index;
 pid_t g_pid;
@@ -198,4 +202,51 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 }
 
 /*sys_execv*/
-
+int sys_execv(char* progname, char** args, int *retval){
+	struct addrspace *as;
+	struct vnode *v;
+	vaddr_t entrypoint, stackptr;
+	int result;
+	(void)args;	
+	result = vfs_open(progname, O_RDONLY, 0, &v);
+	if (result) {
+		return result;
+	}
+	
+	as = as_create();
+	if (as == NULL) {
+		vfs_close(v);
+		return ENOMEM;
+	}
+	
+	proc_setas(as);
+	as_activate();
+	
+	result = load_elf(v, &entrypoint);
+	if (result) {
+		/* p_addrspace will go away when curproc is destroyed */
+		vfs_close(v);
+		return result;
+	}
+	
+	result = as_define_stack(as, &stackptr);
+	if (result) {
+		/* p_addrspace will go away when curproc is destroyed */
+		return result;
+	}
+	
+	
+	/* Done with the file now. */
+	vfs_close(v);
+	*retval = 0;
+	
+	/* Warp to user mode. */
+	//TO DO change args
+	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/,
+			  NULL /*userspace addr of environment*/,
+			  stackptr, entrypoint);
+	
+	/* enter_new_process does not return. */
+	panic("enter_new_process returned\n");
+	return EINVAL;
+}
