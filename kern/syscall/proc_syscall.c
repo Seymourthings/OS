@@ -1,7 +1,9 @@
 #include <types.h>
 #include <kern/errno.h>
-#include <kern/fcntl.h>
 #include <spl.h>
+#include <kern/fcntl.h>
+#include <vfs.h>
+#include <syscall.h>
 #include <proc.h>
 #include <current.h>
 #include <addrspace.h>
@@ -11,9 +13,7 @@
 #include <kern/wait.h>
 #include <lib.h>
 #include <copyinout.h>
-#include <vfs.h>
-#include <kern/syscall.h>
-#include <syscall.h>
+
 int pid_stack[PID_MAX/2];
 int stack_index;
 pid_t g_pid;
@@ -147,16 +147,14 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		*retval = -1;
 		return ESRCH;
 	}else{
+		lock_acquire(curproc->lock);
 		proc = get_proc(pid);
+		lock_release(curproc->lock);
 	}
 	
 	if(proc == NULL){
 		*retval = -1;
 		return ESRCH;
-	}
-	if(status == NULL){
-		*retval = -1;
-		return EFAULT;
 	}
 
 	if(options != 0){
@@ -168,7 +166,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		*retval = -1;
 		return ECHILD;
 	}
-
+	
 	
 	if(proc->exited){
 		lock_acquire(proc->lock);
@@ -177,14 +175,10 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		return 0;
 	}	
 
-
 	lock_acquire(proc->lock);	
 	while(!proc->exited){
-
 		cv_wait(proc->cv, proc->lock);
-
 	}
-	
 	
 	buffer = curproc->exitcode;
 	err = copyout((const void *)&buffer, (userptr_t)status, sizeof(int));
@@ -194,13 +188,17 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	}
 	lock_release(proc->lock);
 	
+//	proc_destroy(proc);
 	
 	*retval = pid;
 	return 0;
 	
 }
+	
+
 
 /*sys_execv*/
+
 int sys_execv(char* progname, char** args, int *retval){
 	struct addrspace *as;
 	struct vnode *v;
@@ -249,3 +247,4 @@ int sys_execv(char* progname, char** args, int *retval){
 	panic("enter_new_process returned\n");
 	return EINVAL;
 }
+
