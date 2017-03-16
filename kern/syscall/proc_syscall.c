@@ -10,6 +10,10 @@
 #include <kern/wait.h>
 #include <lib.h>
 #include <copyinout.h>
+#include <kern/fcntl.h>
+#include <vfs.h>
+#include <syscall.h>
+
 int pid_stack[PID_MAX/2];
 int stack_index;
 pid_t g_pid;
@@ -40,7 +44,6 @@ void sys_exit(int exitcode){
 		index++;
 	}
 
-	
 	curproc->exitcode = _MKWAIT_EXIT(exitcode);
 	curproc->exited = true;
 	cv_broadcast(curproc->cv, curproc->lock);
@@ -178,9 +181,6 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		cv_wait(proc->cv, proc->lock);
 	}
 
-
-
-
 	buffer = proc->exitcode;
 	err = copyout((const char*)&buffer, (userptr_t)status, sizeof(int));
 
@@ -194,4 +194,125 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	lock_release(proc->lock);
 	return 0;
 	
+}
+
+int sys_execv(char* progname, char** args, int *retval){
+	struct addrspace *as;
+	struct vnode *v;
+	vaddr_t entrypoint, stackptr;
+	int result;
+	
+/*	(void)as;
+	(void)v;
+	(void)entrypoint;
+	(void)stackptr;
+*/	
+	char *prog_dest;
+	char **arg_dest;
+	char **arg_temp;
+	size_t prog_stoplen, stoplen; //represents the actual len which gets assigned by copystr
+	size_t arg_len = sizeof(char**); 
+		
+	//Is a string so copinstr	
+	
+	prog_dest = kmalloc(sizeof(char)*PATH_MAX);
+	result = copyinstr((const_userptr_t)progname, prog_dest, PATH_MAX, &prog_stoplen);
+	if(result){
+		*retval = -1;
+		kfree(prog_dest);
+		return ENOMEM;	
+	}
+		
+	//Use copyin, since not a string, this just copies in a pointer, have to allocate memory for each item
+	//is arg_dest (which is in the kernel) pointing to args elements (in userspace) after copyin gets called?
+	
+	arg_temp = kmalloc(arg_len);
+	arg_dest = kmalloc(arg_len);
+	result = copyin((const_userptr_t)args, (void*)arg_temp, arg_len);
+	if(result){
+		*retval = -1;
+		kfree(arg_dest);
+		return ENOMEM;
+	}
+
+	//copy in each args[index] into arg_dest[index] reversely
+		
+	int index = 0;
+	while(args[index] != NULL){
+		arg_temp[index] = kmalloc(sizeof (char *)); 
+		result = copyinstr((const_userptr_t)args[index], arg_temp[index], PATH_MAX, &stoplen);
+		/* NULL terminating args_dest */
+		int len = 4 - (strlen(arg_temp[index])%4);
+		int index_buf = 0;
+		char buffer[strlen(arg_temp[index])+len];
+		strcpy(buffer, arg_temp[index]);
+		while(index_buf < len){
+			strcat(buffer,"\0");
+			index_buf++;
+		}
+		arg_dest[index] = kmalloc(sizeof(char)*4);
+
+		kfree(arg_temp[index]);
+		index++;
+	} 
+	
+	//array is NULL terminated
+	//arg_dest[index] = temp_string;
+	
+	result = vfs_open(prog_dest, O_RDONLY, 0, &v);
+	if (result) {
+		kfree(prog_dest);
+		kfree(arg_dest);
+		*retval = -1;
+		return result;
+	}
+
+	as = as_create();
+	if (as == NULL) {
+		kfree(prog_dest);
+		kfree(arg_dest);
+		*retval = -1;
+		vfs_close(v);
+		return ENOMEM;
+	}
+	
+	proc_setas(as);
+	as_activate();
+	
+	result = load_elf(v, &entrypoint);
+	if (result) {
+		/* p_addrspace will go away when curproc is destroyed */
+		kfree(prog_dest);
+		kfree(arg_dest);
+		*retval = -1;
+		vfs_close(v);
+		return result;
+	}
+
+	vfs_close(v);
+	
+	result = as_define_stack(as, &stackptr);
+	if (result) {
+		/*p_addrspace will go away when curproc is destroyed .*/
+		kfree(prog_dest);
+		kfree(arg_dest);
+		*retval = -1;
+		return result;
+	}
+	
+	
+	/* Done with the file now. */
+//	vfs_close(v); Maybe close here
+	*retval = 0;
+	
+
+	/* Warp to user mode. */
+	//TO DO change args
+	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv.*/,
+			  NULL /*userspace addr of environment.*/,
+			  stackptr, entrypoint);
+	
+	/* enter_new_process does not return. */
+	panic("enter_new_process returned\n");
+	return EINVAL;
 }
