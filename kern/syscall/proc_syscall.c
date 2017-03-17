@@ -201,7 +201,6 @@ int sys_execv(char* progname, char** args, int *retval){
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
 	int result;
-	
 /*	(void)as;
 	(void)v;
 	(void)entrypoint;
@@ -237,6 +236,7 @@ int sys_execv(char* progname, char** args, int *retval){
 
 	//copy in each args[index] into arg_dest[index] reversely
 		
+	int argindex = 0;
 	int index = 0;
 	while(args[index] != NULL){
 		arg_temp[index] = kmalloc(sizeof (char *)); 
@@ -244,20 +244,51 @@ int sys_execv(char* progname, char** args, int *retval){
 		/* NULL terminating args_dest */
 		int len = 4 - (strlen(arg_temp[index])%4);
 		int index_buf = 0;
+		size_t index_argtemp = 0;
+		//size_t arg_dest_size = 0;
 		char buffer[strlen(arg_temp[index])+len];
-		strcpy(buffer, arg_temp[index]);
+		while(index_argtemp < (strlen(arg_temp[index])+len)){
+			buffer[index_argtemp] = arg_temp[index][index_argtemp];
+			index_argtemp++;
+		}
 		while(index_buf < len){
 			strcat(buffer,"\0");
 			index_buf++;
 		}
 		arg_dest[index] = kmalloc(sizeof(char)*4);
-
-		kfree(arg_temp[index]);
-		index++;
-	} 
+		
+		int buffentrycount = (strlen(buffer) + len) / 4;
+		int i = 1;
+		int j = 0;
+		int k = 0;
+		int index_dest = 0;
+		char temp_entry[4];
 	
-	//array is NULL terminated
-	//arg_dest[index] = temp_string;
+
+		while(i <= buffentrycount){
+			while(j < (i*4)){
+				temp_entry[k] = buffer[j];
+				j++;
+				k++;
+			}
+			if(arg_dest[argindex] == NULL){
+				arg_dest[argindex] = kmalloc(sizeof(char)*4);
+	
+			}
+			while(index_dest < 4){
+				arg_dest[argindex][index_dest] = temp_entry[index_dest];
+			index_dest++;
+			}
+			memset(temp_entry, 0, sizeof(temp_entry));
+			k = 0;
+			index_dest = 0;
+			argindex++;
+			i++;
+		}
+		
+		index++;
+		
+	} 
 	
 	result = vfs_open(prog_dest, O_RDONLY, 0, &v);
 	if (result) {
@@ -299,7 +330,22 @@ int sys_execv(char* progname, char** args, int *retval){
 		*retval = -1;
 		return result;
 	}
+	//stackptr = stackptr - (sizeof(arg_dest) * argindex);
 	
+	
+	while(argindex > 0){
+		stackptr -= sizeof(char)*4;
+			result = copyout((const void*)arg_dest[argindex], (userptr_t)stackptr, 4);	
+			argindex--;
+		
+	}
+		
+		if (result) {
+			kfree(prog_dest);
+			kfree(arg_dest);
+			*retval = -1;
+			return result;
+		}
 	
 	/* Done with the file now. */
 //	vfs_close(v); Maybe close here
@@ -308,7 +354,7 @@ int sys_execv(char* progname, char** args, int *retval){
 
 	/* Warp to user mode. */
 	//TO DO change args
-	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv.*/,
+	enter_new_process(index /*argc*/, (userptr_t)stackptr /*userspace addr of argv.*/,
 			  NULL /*userspace addr of environment.*/,
 			  stackptr, entrypoint);
 	

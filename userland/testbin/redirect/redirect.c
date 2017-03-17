@@ -140,7 +140,7 @@ cat(void)
 {
 	pid_t pid;
 	int rfd, wfd, result, status;
-	const char *args[2];
+	const char *args[3];
 
 	rfd = doopen(INFILE, O_RDONLY);
 	wfd = doopen(OUTFILE, O_WRONLY|O_CREAT|O_TRUNC);
@@ -157,7 +157,8 @@ cat(void)
 		doclose(rfd, INFILE);
 		doclose(wfd, OUTFILE);
 		args[0] = "cat";
-		args[1] = NULL;
+		args[1] = "os161";
+		args[2] = NULL;
 		execv(PATH_CAT, (char **)args);
 		warn("%s: execv", PATH_CAT);
 		_exit(1);
