@@ -91,6 +91,9 @@ int sys_open(const char *filename, int flags, int mode, int32_t *retval){
 		kfree(file_dest);
 		return ENFILE;
 	}
+	
+	curproc->file_table[fd]->lock = lock_create(file_dest);
+	lock_acquire(curproc->file_table[fd]->lock);
 
 	//open file
 	err = vfs_open(file_dest,flags,mode, &curproc->file_table[fd]->vnode);
@@ -101,9 +104,6 @@ int sys_open(const char *filename, int flags, int mode, int32_t *retval){
 		return EFAULT;
 	}
 	
-	curproc->file_table[fd]->lock = lock_create(file_dest);
-	
-	lock_acquire(curproc->file_table[fd]->lock);
 	curproc->file_table[fd]->offset = 0;
 	curproc->file_table[fd]->flags = flag_val;
 	curproc->file_table[fd]->count++;
