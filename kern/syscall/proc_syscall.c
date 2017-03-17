@@ -63,6 +63,7 @@ static void child_entrypoint(void* data1, unsigned long data2) {
 	struct trapframe tf;
 	tf = *((struct trapframe *) data1);
 	(void)data2;	
+	kfree(data1);
 	/*Should be a new process, stolen from runprogram.c */
 
 	tf.tf_a3 = 0;
@@ -118,7 +119,8 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 		proc_child->file_table[index] = curproc->file_table[index];
 		index++;
 	};
-	
+		
+	proc_child->p_cwd = curproc->p_cwd;
 	err = thread_fork("child thread", proc_child,
 			(void*)child_entrypoint,tf_temp,(unsigned long)NULL);
 	
@@ -193,18 +195,17 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 
 	lock_release(proc->lock);
 	return 0;
-	
 }
 
 int sys_execv(char* progname, char** args, int *retval){
-	
+
 	struct addrspace *as;
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
 	int result;
 	int lenofwords[50];
 	
-	int lenindex = 0;	
+	int lenindex = 0;
 	/*vars*/
 	char *prog_dest;
 	char **arg_dest;
@@ -220,7 +221,7 @@ int sys_execv(char* progname, char** args, int *retval){
 	if(result){
 		*retval = -1;
 		kfree(prog_dest);
-		return ENOMEM;	
+		return ENOMEM;
 	}
 	
 	//Use copyin, since not a string, this just copies in a pointer, have to allocate memory for each item
@@ -253,7 +254,7 @@ int sys_execv(char* progname, char** args, int *retval){
 			index_buf++;
 		}
 		arg_dest[argindex] = kmalloc(sizeof(char)*4);
-		
+
 		int buffentrycount = (strlen(buffer) + len) / 4;
 		int i = 1;
 		int j = 0;
@@ -280,16 +281,16 @@ int sys_execv(char* progname, char** args, int *retval){
 			index_dest = 0;
 			argindex++;
 			i++;
-		
+
 		}
 
 		lenofwords[lenindex] = buffentrycount;
-		lenindex++;	
+		lenindex++;
 
 		index++;
-		
-	} 
-	
+
+	}
+
 	/* Open the file. */
 	result = vfs_open(progname, O_RDONLY, 0, &v);
 	if (result) {
@@ -335,7 +336,7 @@ int sys_execv(char* progname, char** args, int *retval){
 	while(argindex > 0){
 
 		stackptr -= sizeof(char)*4;
-			result = copyout((const void*)arg_dest[argindex-1], (userptr_t)stackptr, 4);	
+			result = copyout((const void*)arg_dest[argindex-1], (userptr_t)stackptr, 4);
 			keeptrack++;
 			if(keeptrack == lenofwords[lenindex - 1]){
 				
@@ -348,12 +349,10 @@ int sys_execv(char* progname, char** args, int *retval){
 				return result;
 			}
 			argindex--;
-
-		
 	}
 	while(countp >= 0){
 		stackptr -= sizeof(char)*4;
-			result = copyout((const void*)userptr[countp], (userptr_t)stackptr, 4);	
+			result = copyout((const void*)userptr[countp], (userptr_t)stackptr, 4);
 		
 			if (result) {
 				kfree(prog_dest);
@@ -362,17 +361,15 @@ int sys_execv(char* progname, char** args, int *retval){
 				return result;
 			}
 		countp--;
-	}
-		
+	}	
 
 //	kprintf("%d", index);
 	/* Warp to user mode. */
 	enter_new_process(0 /*argc*/, (userptr_t)stackptr /*userspace addr of argv*/,
 			  NULL /*userspace addr of environment*/,
 			  stackptr, entrypoint);
-
-	
 	/* enter_new_process does not return. */
 	panic("enter_new_process returned\n");
 	return EINVAL;
 }
+
