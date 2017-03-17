@@ -202,7 +202,9 @@ int sys_execv(char* progname, char** args, int *retval){
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
 	int result;
+	int lenofwords[50];
 	
+	int lenindex = 0;	
 	/*vars*/
 	char *prog_dest;
 	char **arg_dest;
@@ -259,7 +261,6 @@ int sys_execv(char* progname, char** args, int *retval){
 		int index_dest = 0;
 		char temp_entry[4];
 	
-
 		while(i <= buffentrycount){
 			while(j < (i*4)){
 				temp_entry[k] = buffer[j];
@@ -280,9 +281,13 @@ int sys_execv(char* progname, char** args, int *retval){
 			argindex++;
 			i++;
 		
-		}	
+		}
+
+		lenofwords[lenindex] = buffentrycount;
+		lenindex++;	
+
 		index++;
-	
+		
 	} 
 	
 	/* Open the file. */
@@ -323,10 +328,32 @@ int sys_execv(char* progname, char** args, int *retval){
 		return result;
 	}
 	
+	char **userptr[index+1];
+	int countp = index;
+	int keeptrack = 0;
+	userptr[countp] = NULL;
 	while(argindex > 0){
+
 		stackptr -= sizeof(char)*4;
 			result = copyout((const void*)arg_dest[argindex-1], (userptr_t)stackptr, 4);	
+			keeptrack++;
+			if(keeptrack == lenofwords[lenindex - 1]){
+				
+			
+			}
+			if (result) {
+				kfree(prog_dest);
+				kfree(arg_dest);
+				*retval = -1;
+				return result;
+			}
 			argindex--;
+
+		
+	}
+	while(countp >= 0){
+		stackptr -= sizeof(char)*4;
+			result = copyout((const void*)userptr[countp], (userptr_t)stackptr, 4);	
 		
 			if (result) {
 				kfree(prog_dest);
@@ -334,14 +361,16 @@ int sys_execv(char* progname, char** args, int *retval){
 				*retval = -1;
 				return result;
 			}
-		
+		countp--;
 	}
-	
+		
+
 //	kprintf("%d", index);
 	/* Warp to user mode. */
-	enter_new_process(index /*argc*/, (userptr_t)stackptr /*userspace addr of argv*/,
+	enter_new_process(0 /*argc*/, (userptr_t)stackptr /*userspace addr of argv*/,
 			  NULL /*userspace addr of environment*/,
 			  stackptr, entrypoint);
+
 	
 	/* enter_new_process does not return. */
 	panic("enter_new_process returned\n");
