@@ -197,23 +197,22 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 }
 
 int sys_execv(char* progname, char** args, int *retval){
+	
 	struct addrspace *as;
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
 	int result;
-/*	(void)as;
-	(void)v;
-	(void)entrypoint;
-	(void)stackptr;
-*/	
+	
+	/*vars*/
 	char *prog_dest;
 	char **arg_dest;
 	char **arg_temp;
+	int argindex = 0;
+	int index = 0;
 	size_t prog_stoplen, stoplen; //represents the actual len which gets assigned by copystr
 	size_t arg_len = sizeof(char**); 
-		
-	//Is a string so copinstr	
 	
+	/*copy in progname (PATH)*/
 	prog_dest = kmalloc(sizeof(char)*PATH_MAX);
 	result = copyinstr((const_userptr_t)progname, prog_dest, PATH_MAX, &prog_stoplen);
 	if(result){
@@ -221,7 +220,7 @@ int sys_execv(char* progname, char** args, int *retval){
 		kfree(prog_dest);
 		return ENOMEM;	
 	}
-		
+	
 	//Use copyin, since not a string, this just copies in a pointer, have to allocate memory for each item
 	//is arg_dest (which is in the kernel) pointing to args elements (in userspace) after copyin gets called?
 	
@@ -233,11 +232,7 @@ int sys_execv(char* progname, char** args, int *retval){
 		kfree(arg_dest);
 		return ENOMEM;
 	}
-
-	//copy in each args[index] into arg_dest[index] reversely
-		
-	int argindex = 0;
-	int index = 0;
+	
 	while(args[index] != NULL){
 		arg_temp[index] = kmalloc(sizeof (char *)); 
 		result = copyinstr((const_userptr_t)args[index], arg_temp[index], PATH_MAX, &stoplen);
@@ -255,7 +250,7 @@ int sys_execv(char* progname, char** args, int *retval){
 			strcat(buffer,"\0");
 			index_buf++;
 		}
-		arg_dest[index] = kmalloc(sizeof(char)*4);
+		arg_dest[argindex] = kmalloc(sizeof(char)*4);
 		
 		int buffentrycount = (strlen(buffer) + len) / 4;
 		int i = 1;
@@ -272,7 +267,7 @@ int sys_execv(char* progname, char** args, int *retval){
 				k++;
 			}
 			if(arg_dest[argindex] == NULL){
-				arg_dest[argindex] = kmalloc(sizeof(char)*4);
+			arg_dest[argindex] = kmalloc(sizeof(char)*4);
 	
 			}
 			while(index_dest < 4){
@@ -284,78 +279,68 @@ int sys_execv(char* progname, char** args, int *retval){
 			index_dest = 0;
 			argindex++;
 			i++;
-		}
 		
+		}	
 		index++;
-		
+	
 	} 
 	
-	result = vfs_open(prog_dest, O_RDONLY, 0, &v);
+	/* Open the file. */
+	result = vfs_open(progname, O_RDONLY, 0, &v);
 	if (result) {
-		kfree(prog_dest);
-		kfree(arg_dest);
-		*retval = -1;
 		return result;
 	}
 
+	/* We should be a new process. */
+
+	/* Create a new address space. */
 	as = as_create();
 	if (as == NULL) {
-		kfree(prog_dest);
-		kfree(arg_dest);
-		*retval = -1;
 		vfs_close(v);
 		return ENOMEM;
 	}
-	
+
+	/* Switch to it and activate it. */
 	proc_setas(as);
 	as_activate();
-	
+
+	/* Load the executable. */
 	result = load_elf(v, &entrypoint);
 	if (result) {
 		/* p_addrspace will go away when curproc is destroyed */
-		kfree(prog_dest);
-		kfree(arg_dest);
-		*retval = -1;
 		vfs_close(v);
 		return result;
 	}
 
+	/* Done with the file now. */
 	vfs_close(v);
-	
+
+	/* Define the user stack in the address space */
 	result = as_define_stack(as, &stackptr);
 	if (result) {
-		/*p_addrspace will go away when curproc is destroyed .*/
-		kfree(prog_dest);
-		kfree(arg_dest);
+		/* p_addrspace will go away when curproc is destroyed */
 		*retval = -1;
 		return result;
 	}
-	//stackptr = stackptr - (sizeof(arg_dest) * argindex);
-	
 	
 	while(argindex > 0){
 		stackptr -= sizeof(char)*4;
-			result = copyout((const void*)arg_dest[argindex], (userptr_t)stackptr, 4);	
+			result = copyout((const void*)arg_dest[argindex-1], (userptr_t)stackptr, 4);	
 			argindex--;
 		
-	}
+			if (result) {
+				kfree(prog_dest);
+				kfree(arg_dest);
+				*retval = -1;
+				return result;
+			}
 		
-		if (result) {
-			kfree(prog_dest);
-			kfree(arg_dest);
-			*retval = -1;
-			return result;
-		}
+	}
 	
-	/* Done with the file now. */
-//	vfs_close(v); Maybe close here
-	*retval = 0;
-	
-
+//	kprintf("%d", index);
 	/* Warp to user mode. */
-	//TO DO change args
-	enter_new_process(index /*argc*/, (userptr_t)stackptr /*userspace addr of argv.*/,
-			  NULL /*userspace addr of environment.*/,
+	enter_new_process(index /*argc*/, (userptr_t)stackptr /*userspace addr of argv*/,
+			  NULL /*userspace addr of environment*/,
 			  stackptr, entrypoint);
 	
 	/* enter_new_process does not return. */

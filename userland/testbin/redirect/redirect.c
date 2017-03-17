@@ -156,7 +156,7 @@ cat(void)
 		dodup2(wfd, STDOUT_FILENO, OUTFILE);
 		doclose(rfd, INFILE);
 		doclose(wfd, OUTFILE);
-		args[0] = "cat";
+		args[0] = "dogs";
 		args[1] = "os161";
 		args[2] = NULL;
 		execv(PATH_CAT, (char **)args);
