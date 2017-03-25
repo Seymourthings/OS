@@ -92,6 +92,7 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 	}
 	lock_acquire(proc_child->lock);
 	proc_child->ppid = curproc->pid;
+	proc_child->p_cwd = curproc->p_cwd;
 	lock_release(proc_child->lock);
 	/* Allocating space for address and copying into temp var */
 	
@@ -123,7 +124,6 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 		index++;
 	};
 		
-	proc_child->p_cwd = curproc->p_cwd;
 	err = thread_fork("child thread", proc_child,
 			(void*)child_entrypoint,tf_temp,(unsigned long)NULL);
 	
@@ -197,7 +197,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	*retval = pid;
 
 	lock_release(proc->lock);
-	kfree(proc);	
+//	kfree(proc);	
 	return 0;
 }
 
@@ -206,21 +206,23 @@ int sys_execv(char* progname, char** args, int *retval){
 	struct addrspace *as;
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
-	int result, index;
-	size_t proglen, arglen, char_index;
+	int result, index, char_index, char_reset, null_count, argcount;
+	size_t proglen, arglen;
 	
 	arglen = 0;
 	index = 0;
+	null_count = 0;
 	while(args[index] != NULL){
 		arglen += strlen(args[index]);
-		index++; //currently holds the count of arguments - aka number of pointers
+		index++; 	
 	}
+	
+	//currently holds the count of arguments - aka number of pointers
+	argcount = index;	
+	null_count = arglen + index;
 
 	char prog_dest[PATH_MAX];	
-	char *arg_dest[arglen], *userspace_args[index];//, char_buffer[arglen];
-
-	(void)entrypoint;
-	(void)stackptr;
+	char *arg_dest[arglen], *userspace_args[index], char_buffer[null_count];
 
 	/*copy in progname (PATH)*/
 	result = copyinstr((const_userptr_t)progname, prog_dest, PATH_MAX, &proglen);
@@ -231,9 +233,10 @@ int sys_execv(char* progname, char** args, int *retval){
 		return ENOMEM;
 	}
 	
-	//Use copyin, since not a string, this just copies in a pointer, have to allocate memory for each item
-	//is arg_dest (which is in the kernel) pointing to args elements (in userspace) after copyin gets called?
-
+	/* Use copyin, since not a string.
+	 * Is arg_dest (which is in the kernel) pointing to 
+	 * args elements (in userspace) after copyin gets called?
+	*/
 	result = copyin((const_userptr_t)args, (void*)&arg_dest, arglen);
 	if(result){
 		*retval = -1;
@@ -242,23 +245,29 @@ int sys_execv(char* progname, char** args, int *retval){
 		return ENOMEM;
 	}
 	
-	/* Let the padding begin */
+	/* Let the padding begin: 
+	 * Makes a char array with one char at each index
+	 * Each arg is sepearted by a space (null does not work)
+	 * Then a pointer array is assigned to this char buffer
+	 */
 	index = 0;
 	char_index = 0;
+	char_reset = 0;
 	while(arg_dest[index] != NULL){
-		char *temp = arg_dest[index];
-		size_t null_inclusive = strlen(temp)+1;
-		userspace_args[index] = temp;//&char_buffer[char_index];
-		/* This all fails now below
-		while(char_index <= null_inclusive){
-			*userspace_args[char_index] = temp[char_index];
-			//char_buffer[char_index] = temp[char_index];
+	//	char *temp = arg_dest[index];
+		userspace_args[index] = &char_buffer[char_index]; 
+		while(arg_dest[index][char_reset] != '\0'){
+			char_buffer[char_index] = arg_dest[index][char_reset];
 			char_index++;
+			char_reset++;
 		}
-		char_index = 0;*/
+		char_buffer[char_index] = ' ';//how we're separting these
+		char_reset = 0;
+		char_index++; //increment for null char
 		index++;
 	}
-	(void)userspace_args;
+	char_index = 0;
+	
 	/* Open the file. */
 	result = vfs_open(progname, O_RDONLY, 0, &v);
 	if (result) {
@@ -298,10 +307,17 @@ int sys_execv(char* progname, char** args, int *retval){
 		*retval = -1;
 		return result;
 	}
-	
-//	kprintf("%d", index);
+	stackptr -= null_count;
+	result = copyout((const void *)userspace_args, (userptr_t)stackptr, (size_t)null_count);
+
+	if(result){
+		*retval = -1;
+		return ENOMEM;
+	}
+
 	/* Warp to user mode. */
-	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/,
+	//enter_new_process(0, NULL, NULL, stackptr, entrypoint);
+	enter_new_process(argcount /*argc*/, (userptr_t)stackptr /*userspace addr of argv*/,
 			  NULL /*userspace addr of environment*/,
 			  stackptr, entrypoint);
 	/* enter_new_process does not return. */
