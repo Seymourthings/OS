@@ -329,7 +329,7 @@ int sys_execv(char* progname, char** args, int *retval){
 		return result;
 	}
 	
-	char **userptr[index+1];
+	userptr_t userptr[index+1];
 	int countp = index;
 	int keeptrack = 0;
 	userptr[countp] = NULL;
@@ -340,7 +340,9 @@ int sys_execv(char* progname, char** args, int *retval){
 			keeptrack++;
 			if(keeptrack == lenofwords[lenindex - 1]){
 				
-			
+				countp++;
+				userptr[countp] = (userptr_t) stackptr;
+				keeptrack = 0;
 			}
 			if (result) {
 				kfree(prog_dest);
@@ -350,9 +352,12 @@ int sys_execv(char* progname, char** args, int *retval){
 			}
 			argindex--;
 	}
+
+	countp = index;
+	void *voidargs[countp];
 	while(countp >= 0){
 		stackptr -= sizeof(char)*4;
-			result = copyout((const void*)userptr[countp], (userptr_t)stackptr, 4);
+			result = copyout((const void*)voidargs[countp], (userptr_t)stackptr, 4);
 		
 			if (result) {
 				kfree(prog_dest);
@@ -362,10 +367,27 @@ int sys_execv(char* progname, char** args, int *retval){
 			}
 		countp--;
 	}	
+	int c = 0;
+	while(c <= index){
+		
+			result = copyout((const void*)userptr[c], (userptr_t)stackptr, 4);
+	
+				
+			if (result) {
+				kfree(prog_dest);
+				kfree(arg_dest);
+				*retval = -1;
+				return result;
+			}
 
+		stackptr += 4;
+		c++;
+	}
+
+	stackptr = stackptr - (index+1);
 //	kprintf("%d", index);
 	/* Warp to user mode. */
-	enter_new_process(0 /*argc*/, (userptr_t)stackptr /*userspace addr of argv*/,
+	enter_new_process(index /*argc*/, (userptr_t)stackptr /*userspace addr of argv*/,
 			  NULL /*userspace addr of environment*/,
 			  stackptr, entrypoint);
 	/* enter_new_process does not return. */
