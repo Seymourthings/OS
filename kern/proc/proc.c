@@ -148,7 +148,7 @@ proc_destroy(struct proc *proc)
 	 * so ensure it starts at the end and traverses till the beginning
 	 */
 
-	/*proc->fd = OPEN_MAX - 1;
+/*	proc->fd = OPEN_MAX - 1;
 	while(proc->fd > 0){
 		if(proc->file_table[proc->fd]){
 			if(proc->file_table[proc->fd]->lock){

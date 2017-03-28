@@ -26,6 +26,7 @@ pid_t sys_getpid(int32_t *retval){
 
 /* Curproc exits */
 void sys_exit(int exitcode){
+	
 	/*
 	 * Since this is exiting, if any children were
 	 * forked from here, we must assign them a new parent.
@@ -60,6 +61,7 @@ void sys_exit(int exitcode){
  * At this point child is curproc
  */
 static void child_entrypoint(void* data1, unsigned long data2) {
+	
 	struct trapframe tf;
 	tf = *((struct trapframe *) data1);
 	(void)data2;	
@@ -77,6 +79,7 @@ static void child_entrypoint(void* data1, unsigned long data2) {
 }
 
 pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
+	
 	struct proc *proc_child;
 	struct trapframe *tf_temp;
 	int err;
@@ -89,6 +92,7 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 	}
 	lock_acquire(proc_child->lock);
 	proc_child->ppid = curproc->pid;
+	proc_child->p_cwd = curproc->p_cwd;
 	lock_release(proc_child->lock);
 	/* Allocating space for address and copying into temp var */
 	
@@ -120,7 +124,6 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 		index++;
 	};
 		
-	proc_child->p_cwd = curproc->p_cwd;
 	err = thread_fork("child thread", proc_child,
 			(void*)child_entrypoint,tf_temp,(unsigned long)NULL);
 	
@@ -132,6 +135,7 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 }
 
 struct proc *get_proc(pid_t pid){
+	
 	int i = 0;
 	for(; i < PROC_MAX; i++){
 		if(pid == proc_table[i]->pid){
@@ -173,7 +177,6 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		
 
 	if(curproc->pid != proc->ppid){
-				
 		*retval = -1;
 		return ECHILD;
 	}	
@@ -194,110 +197,86 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	*retval = pid;
 
 	lock_release(proc->lock);
+//	kfree(proc);	
 	return 0;
 }
 
-int sys_execv(char* progname, char** args, int *retval){
 
+int sys_execv(char* progname, char** args, int *retval){
+	
 	struct addrspace *as;
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
-	int result;
-	int lenofwords[50];
+	int result, index, char_index, char_reset, null_count, argcount;
+	size_t proglen, arglen;
 	
-	int lenindex = 0;
-	/*vars*/
-	char *prog_dest;
-	char **arg_dest;
-	char **arg_temp;
-	int argindex = 0;
-	int index = 0;
-	size_t prog_stoplen, stoplen; //represents the actual len which gets assigned by copystr
-	size_t arg_len = sizeof(char**); 
+	arglen = 0;
+	index = 0;
+	null_count = 0;
+	while(args[index] != NULL){
+		arglen += strlen(args[index]);
+		index++; 	
+	}
 	
+	//currently holds the count of arguments - aka number of pointers
+	argcount = index;	
+	null_count = arglen + index;
+
+	char prog_dest[PATH_MAX];	
+	char *arg_dest[arglen], *userspace_args[index], char_buffer[null_count];
+
 	/*copy in progname (PATH)*/
-	prog_dest = kmalloc(sizeof(char)*PATH_MAX);
-	result = copyinstr((const_userptr_t)progname, prog_dest, PATH_MAX, &prog_stoplen);
+	result = copyinstr((const_userptr_t)progname, prog_dest, PATH_MAX, &proglen);
+	
 	if(result){
 		*retval = -1;
 		kfree(prog_dest);
 		return ENOMEM;
 	}
 	
-	//Use copyin, since not a string, this just copies in a pointer, have to allocate memory for each item
-	//is arg_dest (which is in the kernel) pointing to args elements (in userspace) after copyin gets called?
-	
-	arg_temp = kmalloc(arg_len);
-	arg_dest = kmalloc(arg_len);
-	result = copyin((const_userptr_t)args, (void*)arg_temp, arg_len);
+	/* Use copyin, since not a string.
+	 * Is arg_dest (which is in the kernel) pointing to 
+	 * args elements (in userspace) after copyin gets called?
+	*/
+	result = copyin((const_userptr_t)args, (void*)&arg_dest, arglen);
 	if(result){
 		*retval = -1;
+		kfree(prog_dest);
 		kfree(arg_dest);
 		return ENOMEM;
 	}
 	
-	while(args[index] != NULL){
-		arg_temp[index] = kmalloc(sizeof (char *)); 
-		result = copyinstr((const_userptr_t)args[index], arg_temp[index], PATH_MAX, &stoplen);
-		/* NULL terminating args_dest */
-		int len = 4 - (strlen(arg_temp[index])%4);
-		int index_buf = 0;
-		size_t index_argtemp = 0;
-		//size_t arg_dest_size = 0;
-		char buffer[strlen(arg_temp[index])+len];
-		while(index_argtemp < (strlen(arg_temp[index])+len)){
-			buffer[index_argtemp] = arg_temp[index][index_argtemp];
-			index_argtemp++;
+	/* Let the padding begin: 
+	 * Makes a char array with one char at each index
+	 * Each arg is sepearted by a space (null does not work)
+	 * Then a pointer array is assigned to this char buffer
+	 */
+	index = 0;
+	char_index = 0;
+	char_reset = 0;
+	while(arg_dest[index] != NULL){
+	//	char *temp = arg_dest[index];
+		userspace_args[index] = &char_buffer[char_index]; 
+		while(arg_dest[index][char_reset] != '\0'){
+			char_buffer[char_index] = arg_dest[index][char_reset];
+			char_index++;
+			char_reset++;
 		}
-		while(index_buf < len){
-			strcat(buffer,"\0");
-			index_buf++;
-		}
-		arg_dest[argindex] = kmalloc(sizeof(char)*4);
-
-		int buffentrycount = (strlen(buffer) + len) / 4;
-		int i = 1;
-		int j = 0;
-		int k = 0;
-		int index_dest = 0;
-		char temp_entry[4];
-	
-		while(i <= buffentrycount){
-			while(j < (i*4)){
-				temp_entry[k] = buffer[j];
-				j++;
-				k++;
-			}
-			if(arg_dest[argindex] == NULL){
-			arg_dest[argindex] = kmalloc(sizeof(char)*4);
-	
-			}
-			while(index_dest < 4){
-				arg_dest[argindex][index_dest] = temp_entry[index_dest];
-			index_dest++;
-			}
-			memset(temp_entry, 0, sizeof(temp_entry));
-			k = 0;
-			index_dest = 0;
-			argindex++;
-			i++;
-
-		}
-
-		lenofwords[lenindex] = buffentrycount;
-		lenindex++;
-
+		char_buffer[char_index] = ' ';//how we're separting these
+		char_reset = 0;
+		char_index++; //increment for null char
 		index++;
-
 	}
-
+	char_index = 0;
+	
 	/* Open the file. */
 	result = vfs_open(progname, O_RDONLY, 0, &v);
 	if (result) {
+		*retval = -1;
+		kfree(prog_dest);
+		kfree(arg_dest);
 		return result;
 	}
-
-	/* We should be a new process. */
 
 	/* Create a new address space. */
 	as = as_create();
@@ -315,6 +294,7 @@ int sys_execv(char* progname, char** args, int *retval){
 	if (result) {
 		/* p_addrspace will go away when curproc is destroyed */
 		vfs_close(v);
+		*retval = -1;
 		return result;
 	}
 
@@ -328,70 +308,20 @@ int sys_execv(char* progname, char** args, int *retval){
 		*retval = -1;
 		return result;
 	}
-	
-	userptr_t userptr[index+1];
-	int countp = index;
-	int keeptrack = 0;
-	userptr[countp] = NULL;
-	while(argindex > 0){
+	stackptr -= null_count;
+	result = copyout((const void *)userspace_args, (userptr_t)stackptr, (size_t)null_count);
 
-		stackptr -= sizeof(char)*4;
-			result = copyout((const void*)arg_dest[argindex-1], (userptr_t)stackptr, 4);
-			keeptrack++;
-			if(keeptrack == lenofwords[lenindex - 1]){
-				
-				countp++;
-				userptr[countp] = (userptr_t) stackptr;
-				keeptrack = 0;
-			}
-			if (result) {
-				kfree(prog_dest);
-				kfree(arg_dest);
-				*retval = -1;
-				return result;
-			}
-			argindex--;
+	if(result){
+		*retval = -1;
+		return ENOMEM;
 	}
 
-	countp = index;
-	void *voidargs[countp];
-	while(countp >= 0){
-		stackptr -= sizeof(char)*4;
-			result = copyout((const void*)voidargs[countp], (userptr_t)stackptr, 4);
-		
-			if (result) {
-				kfree(prog_dest);
-				kfree(arg_dest);
-				*retval = -1;
-				return result;
-			}
-		countp--;
-	}	
-	int c = 0;
-	while(c <= index){
-		
-			result = copyout((const void*)userptr[c], (userptr_t)stackptr, 4);
-	
-				
-			if (result) {
-				kfree(prog_dest);
-				kfree(arg_dest);
-				*retval = -1;
-				return result;
-			}
-
-		stackptr += 4;
-		c++;
-	}
-
-	stackptr = stackptr - (index+1);
-//	kprintf("%d", index);
 	/* Warp to user mode. */
-	enter_new_process(index /*argc*/, (userptr_t)stackptr /*userspace addr of argv*/,
+	//enter_new_process(0, NULL, NULL, stackptr, entrypoint);
+	enter_new_process(argcount /*argc*/, (userptr_t)stackptr /*userspace addr of argv*/,
 			  NULL /*userspace addr of environment*/,
 			  stackptr, entrypoint);
 	/* enter_new_process does not return. */
 	panic("enter_new_process returned\n");
 	return EINVAL;
 }
-
