@@ -13,7 +13,6 @@
 #include <kern/fcntl.h>
 #include <vfs.h>
 #include <syscall.h>
-
 int pid_stack[PID_MAX/2];
 int stack_index;
 pid_t g_pid;
@@ -207,14 +206,19 @@ int sys_execv(char* progname, char** args, int *retval){
 	struct addrspace *as;
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
-	int result, index, char_index, char_reset, null_count, argcount;
-	size_t proglen, arglen;
+	int result, index,numindex, char_reset, null_count, argcount, char_buflen;
+	size_t proglen, arglen, char_index;
 	
 	arglen = 0;
 	index = 0;
 	null_count = 0;
+	char_buflen = 0;
+	char_index = 0;
+
 	while(args[index] != NULL){
 		arglen += strlen(args[index]);
+		/* Will be used to make a buffer that can fit args and padding chars*/
+		char_buflen += strlen(args[index])  +  (4 - (strlen(args[index])%4));
 		index++; 	
 	}
 	
@@ -222,9 +226,10 @@ int sys_execv(char* progname, char** args, int *retval){
 	argcount = index;	
 	null_count = arglen + index;
 
-	char prog_dest[PATH_MAX];	
-	char *arg_dest[arglen], *userspace_args[index], char_buffer[null_count];
-
+	char prog_dest[PATH_MAX];
+	char *arg_dest[arglen], *userspace_args[index+1], char_buffer[char_buflen];
+	//int array for args word count in terms of 4byte words arg+padding 
+	int num_of_4byte[50];
 	/*copy in progname (PATH)*/
 	result = copyinstr((const_userptr_t)progname, prog_dest, PATH_MAX, &proglen);
 	
@@ -238,24 +243,47 @@ int sys_execv(char* progname, char** args, int *retval){
 	 * Is arg_dest (which is in the kernel) pointing to 
 	 * args elements (in userspace) after copyin gets called?
 	*/
+	
 	result = copyin((const_userptr_t)args, (void*)&arg_dest, arglen);
 	if(result){
 		*retval = -1;
-		kfree(prog_dest);
-		kfree(arg_dest);
 		return ENOMEM;
 	}
 	
-	/* Let the padding begin: 
-	 * Makes a char array with one char at each index
-	 * Each arg is sepearted by a space (null does not work)
-	 * Then a pointer array is assigned to this char buffer
-	 */
+	/* The one about the null padding 
+	 * After this char_buffer is an array of chars
+	 * with null padding	
+	*/
+	index = 0;
+	while(arg_dest[index] != NULL){
+		while(arg_dest[index] != NULL){
+			size_t len = 4 - (strlen(arg_dest[index])%4);
+			/*newlen includes null chars to be copied by concat_null*/
+			
+			size_t newlen = strlen(arg_dest[index]) + len;	
+			char *temp = concat_null(arg_dest[index], len, newlen);
+			//numof4bytes holds number of 4bytes that makes up temp
+			int numof4byte = (strlen(temp) + len) / 4;
+			while(char_index < newlen){
+				char_buffer[char_index] = temp[char_index];
+				char_index++;
+			}
+		//add current args number of 4 bytes to array 
+		num_of_4byte[numindex] = numof4byte;
+		
+		kprintf("numofbyte: %d\n", num_of_4byte[numindex]);
+		numindex++;
+		index++;	
+		}
+	}
+	
+	/**********************  TO BE REPURPOSED ********************/
+
 	index = 0;
 	char_index = 0;
 	char_reset = 0;
+	
 	while(arg_dest[index] != NULL){
-	//	char *temp = arg_dest[index];
 		userspace_args[index] = &char_buffer[char_index]; 
 		while(arg_dest[index][char_reset] != '\0'){
 			char_buffer[char_index] = arg_dest[index][char_reset];
@@ -264,10 +292,13 @@ int sys_execv(char* progname, char** args, int *retval){
 		}
 		char_buffer[char_index] = ' ';//how we're separting these
 		char_reset = 0;
-		char_index++; //increment for null char
+	//	char_index++; //increment for null char
 		index++;
 	}
+	userspace_args[index] = NULL; //NULL terminated array
 	char_index = 0;
+	
+	/**********************  TO BE REPURPOSED ********************/
 	
 	/* Open the file. */
 	result = vfs_open(progname, O_RDONLY, 0, &v);
@@ -307,7 +338,8 @@ int sys_execv(char* progname, char** args, int *retval){
 		/* p_addrspace will go away when curproc is destroyed */
 		*retval = -1;
 		return result;
-	}
+	}	
+	
 	stackptr -= null_count;
 	result = copyout((const void *)userspace_args, (userptr_t)stackptr, (size_t)null_count);
 
@@ -317,11 +349,25 @@ int sys_execv(char* progname, char** args, int *retval){
 	}
 
 	/* Warp to user mode. */
-	//enter_new_process(0, NULL, NULL, stackptr, entrypoint);
 	enter_new_process(argcount /*argc*/, (userptr_t)stackptr /*userspace addr of argv*/,
 			  NULL /*userspace addr of environment*/,
 			  stackptr, entrypoint);
 	/* enter_new_process does not return. */
 	panic("enter_new_process returned\n");
 	return EINVAL;
+}
+
+char * concat_null(char * str, size_t len, size_t buflen){
+	size_t index = 0;
+	char temp[buflen];
+	while(str[index] != '\0'){
+		temp[index] = str[index];
+		index++;
+	}
+	while(index < len){
+		strcat(temp, "\0");
+		index++;
+	}
+	char *rtrn = temp;
+	return rtrn;
 }
