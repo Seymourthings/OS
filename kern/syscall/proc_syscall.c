@@ -206,7 +206,7 @@ int sys_execv(char* progname, char** args, int *retval){
 	struct addrspace *as;
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
-	int result, index,numindex, char_reset, null_count, argcount, char_buflen;
+	int result, index,numindex, char_reset, null_count, argcount, char_buflen, num_of_ptrs;
 	size_t proglen, arglen, char_index;
 	
 	arglen = 0;
@@ -223,11 +223,11 @@ int sys_execv(char* progname, char** args, int *retval){
 	}
 	
 	//currently holds the count of arguments - aka number of pointers
-	argcount = index;	
+	argcount = index;
 	null_count = arglen + index;
 
 	char prog_dest[PATH_MAX];
-	char *arg_dest[arglen], *userspace_args[index+1], char_buffer[char_buflen];
+	char *arg_dest[arglen], char_buffer[char_buflen];
 	//int array for args word count in terms of 4byte words arg+padding 
 	int num_of_4byte[50];
 	/*copy in progname (PATH)*/
@@ -254,7 +254,9 @@ int sys_execv(char* progname, char** args, int *retval){
 	 * After this char_buffer is an array of chars
 	 * with null padding	
 	*/
+
 	index = 0;
+	num_of_ptrs = 0;
 	while(arg_dest[index] != NULL){
 		while(arg_dest[index] != NULL){
 			size_t len = 4 - (strlen(arg_dest[index])%4);
@@ -264,18 +266,20 @@ int sys_execv(char* progname, char** args, int *retval){
 			char *temp = concat_null(arg_dest[index], len, newlen);
 			//numof4bytes holds number of 4bytes that makes up temp
 			int numof4byte = (strlen(temp) + len) / 4;
+			num_of_ptrs += numof4byte;
 			while(char_index < newlen){
 				char_buffer[char_index] = temp[char_index];
 				char_index++;
 			}
 		//add current args number of 4 bytes to array 
 		num_of_4byte[numindex] = numof4byte;
-		
-		kprintf("numofbyte: %d\n", num_of_4byte[numindex]);
 		numindex++;
 		index++;	
 		}
 	}
+	
+	/* "/testbin/add 1 2" has 6 ptrs */
+	char *userspace_args[num_of_ptrs];
 	
 	/**********************  TO BE REPURPOSED ********************/
 
