@@ -343,7 +343,7 @@ int sys_execv(char* progname, char** args, int *retval){
 		
 	kprintf("Stackptr Before Char_index: %d\n", stackptr);
 	/* Size of char buffer and char pointers array*/
-	stackptr -= char_index;
+	stackptr -= sizeof(char_buffer);
 	kprintf("Stackptr After Char_index: %d\n", stackptr);
 
 	index = 0;
@@ -371,11 +371,12 @@ int sys_execv(char* progname, char** args, int *retval){
 		*retval = -1;
 		return ENOMEM;
 	}
+	stackptr += usr_args_size;
 	
 	kprintf("Stackptr After copying out userpace_args: %d\n", stackptr);
 	
 	result = copyout((const void*)char_buffer, (userptr_t)stackptr,char_buffer_size);
-	
+	stackptr += char_buffer_size;
 	kprintf("Stackptr After Copying out char_buffer: %d\n", stackptr);
 	
 	stackptr -= copyout_data;
