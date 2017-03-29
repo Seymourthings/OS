@@ -206,12 +206,11 @@ int sys_execv(char* progname, char** args, int *retval){
 	struct addrspace *as;
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
-	int result, index,numindex, char_reset, null_count, argcount, char_buflen, num_of_ptrs;
+	int result, index, numindex, argcount, char_buflen;
 	size_t proglen, arglen, char_index;
 	
 	arglen = 0;
 	index = 0;
-	null_count = 0;
 	char_buflen = 0;
 	char_index = 0;
 
@@ -224,12 +223,11 @@ int sys_execv(char* progname, char** args, int *retval){
 	
 	//currently holds the count of arguments - aka number of pointers
 	argcount = index;
-	null_count = arglen + index;
 
 	char prog_dest[PATH_MAX];
 	char *arg_dest[arglen], char_buffer[char_buflen];
 	//int array for args word count in terms of 4byte words arg+padding 
-	int num_of_4byte[50];
+	int num_of_4byte[argcount];
 	/*copy in progname (PATH)*/
 	result = copyinstr((const_userptr_t)progname, prog_dest, PATH_MAX, &proglen);
 	
@@ -256,7 +254,7 @@ int sys_execv(char* progname, char** args, int *retval){
 	*/
 
 	index = 0;
-	num_of_ptrs = 0;
+	numindex = 0;
 	while(arg_dest[index] != NULL){
 		while(arg_dest[index] != NULL){
 			size_t len = 4 - (strlen(arg_dest[index])%4);
@@ -266,7 +264,6 @@ int sys_execv(char* progname, char** args, int *retval){
 			char *temp = concat_null(arg_dest[index], len, newlen);
 			//numof4bytes holds number of 4bytes that makes up temp
 			int numof4byte = (strlen(temp) + len) / 4;
-			num_of_ptrs += numof4byte;
 			while(char_index < newlen){
 				char_buffer[char_index] = temp[char_index];
 				char_index++;
@@ -278,10 +275,10 @@ int sys_execv(char* progname, char** args, int *retval){
 		}
 	}
 	
-	/* "/testbin/add 1 2" has 6 ptrs */
-	char *userspace_args[num_of_ptrs];
+	/* "/testbin/add 1 2" has 4 ptrs */
+	void *userspace_args[argcount+1];
 	
-	/**********************  TO BE REPURPOSED ********************/
+	/**********************  TO BE REPURPOSED ********************
 
 	index = 0;
 	char_index = 0;
@@ -302,7 +299,7 @@ int sys_execv(char* progname, char** args, int *retval){
 	userspace_args[index] = NULL; //NULL terminated array
 	char_index = 0;
 	
-	/**********************  TO BE REPURPOSED ********************/
+	**********************  TO BE REPURPOSED ********************/
 	
 	/* Open the file. */
 	result = vfs_open(progname, O_RDONLY, 0, &v);
@@ -343,15 +340,47 @@ int sys_execv(char* progname, char** args, int *retval){
 		*retval = -1;
 		return result;
 	}	
+		
+	kprintf("Stackptr Before Char_index: %d\n", stackptr);
+	/* Size of char buffer and char pointers array*/
+	stackptr -= char_index;
+	kprintf("Stackptr After Char_index: %d\n", stackptr);
+
+	index = 0;
+	while(index < argcount){
+		userspace_args[index] = &stackptr;
+		stackptr += 4*num_of_4byte[index];
+		index++;
+	}
+	userspace_args[index] = NULL;
+	/* Size of char pointer array and char buffer array */
+	size_t usr_args_size = sizeof(userspace_args);
+	size_t char_buffer_size = sizeof(char_buffer);
+	size_t copyout_data = usr_args_size + char_buffer_size;
+	kprintf("Char Buffer Size %d\n", char_buffer_size);
+	kprintf("Copyout data %d\n", copyout_data);
 	
-	stackptr -= null_count;
-	result = copyout((const void *)userspace_args, (userptr_t)stackptr, (size_t)null_count);
+	
+	kprintf("Stackptr Before Copyoutdata; should be Before Chr_index: %d\n", stackptr);
+	stackptr -= copyout_data;
+	kprintf("Stackptr After Copyoutdata: %d\n", stackptr);
+	
+	result = copyout((const void *)userspace_args, (userptr_t)stackptr,usr_args_size);
 
 	if(result){
 		*retval = -1;
 		return ENOMEM;
 	}
-
+	
+	kprintf("Stackptr After copying out userpace_args: %d\n", stackptr);
+	
+	result = copyout((const void*)char_buffer, (userptr_t)stackptr,char_buffer_size);
+	
+	kprintf("Stackptr After Copying out char_buffer: %d\n", stackptr);
+	
+	stackptr -= copyout_data;
+	kprintf("Stackptr should be back at After CopyoutData: %d\n", stackptr);
+	
 	/* Warp to user mode. */
 	enter_new_process(argcount /*argc*/, (userptr_t)stackptr /*userspace addr of argv*/,
 			  NULL /*userspace addr of environment*/,
