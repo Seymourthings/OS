@@ -263,7 +263,7 @@ int sys_execv(char* progname, char** args, int *retval){
 			size_t newlen = strlen(arg_dest[index]) + len;	
 			char *temp = concat_null(arg_dest[index], len, newlen);
 			//numof4bytes holds number of 4bytes that makes up temp
-			int numof4byte = (strlen(temp) + len) / 4;
+			int numof4byte = (strlen(temp) + 4) / 4;
 			while(char_index < newlen){
 				char_buffer[char_index] = temp[char_index];
 				char_index++;
@@ -271,7 +271,7 @@ int sys_execv(char* progname, char** args, int *retval){
 		//add current args number of 4 bytes to array 
 		num_of_4byte[numindex] = numof4byte;
 		
-		kprintf("numofbyte: %d\n", num_of_4byte[numindex]);
+		kprintf("numofbytes: %d\n", num_of_4byte[numindex]);
 		numindex++;
 		index++;	
 		}
