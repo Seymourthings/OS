@@ -279,27 +279,6 @@ int sys_execv(char* progname, char** args, int *retval){
 	/* "/testbin/add 1 2" has 4 ptrs */
 	void *userspace_args[argcount+1];
 	
-	/**********************  TO BE REPURPOSED ********************
-	index = 0;
-	char_index = 0;
-	char_reset = 0;
-	
-	while(arg_dest[index] != NULL){
-		userspace_args[index] = &char_buffer[char_index]; 
-		while(arg_dest[index][char_reset] != '\0'){
-			char_buffer[char_index] = arg_dest[index][char_reset];
-			char_index++;
-			char_reset++;
-		}
-		char_buffer[char_index] = ' ';//how we're separting these
-		char_reset = 0;
-	//	char_index++; //increment for null char
-		index++;
-	}
-	userspace_args[index] = NULL; //NULL terminated array
-	char_index = 0;
-	
-	**********************  TO BE REPURPOSED ********************/
 	
 	/* Open the file. */
 	result = vfs_open(progname, O_RDONLY, 0, &v);
@@ -341,14 +320,12 @@ int sys_execv(char* progname, char** args, int *retval){
 		return result;
 	}	
 		
-	kprintf("Stackptr Before Char_index: %d\n", stackptr);
 	/* Size of char buffer and char pointers array*/
 	stackptr -= sizeof(char_buffer);
-	kprintf("Stackptr After Char_index: %d\n", stackptr);
 
 	index = 0;
 	while(index < argcount){
-		userspace_args[index] = &stackptr;
+		userspace_args[index] = (void*)stackptr;
 		stackptr += 4*num_of_4byte[index];
 		index++;
 	}
@@ -357,13 +334,9 @@ int sys_execv(char* progname, char** args, int *retval){
 	size_t usr_args_size = sizeof(userspace_args);
 	size_t char_buffer_size = sizeof(char_buffer);
 	size_t copyout_data = usr_args_size + char_buffer_size;
-	kprintf("Char Buffer Size %d\n", char_buffer_size);
-	kprintf("Copyout data %d\n", copyout_data);
 	
 	
-	kprintf("Stackptr Before Copyoutdata; should be Before Chr_index: %d\n", stackptr);
 	stackptr -= copyout_data;
-	kprintf("Stackptr After Copyoutdata: %d\n", stackptr);
 	
 	result = copyout((const void *)userspace_args, (userptr_t)stackptr,usr_args_size);
 
@@ -373,14 +346,11 @@ int sys_execv(char* progname, char** args, int *retval){
 	}
 	stackptr += usr_args_size;
 	
-	kprintf("Stackptr After copying out userpace_args: %d\n", stackptr);
 	
 	result = copyout((const void*)char_buffer, (userptr_t)stackptr,char_buffer_size);
 	stackptr += char_buffer_size;
-	kprintf("Stackptr After Copying out char_buffer: %d\n", stackptr);
 	
 	stackptr -= copyout_data;
-	kprintf("Stackptr should be back at After CopyoutData: %d\n", stackptr);
 	
 	/* Warp to user mode. */
 	enter_new_process(argcount /*argc*/, (userptr_t)stackptr /*userspace addr of argv*/,
