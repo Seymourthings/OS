@@ -206,7 +206,7 @@ int sys_execv(char* progname, char** args, int *retval){
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
 	int result, index, numindex, argcount, char_buflen;
-	size_t proglen, arglen, char_index;
+	size_t proglen, arglen, char_index, char_reset;
 	
 	arglen = 0;
 	index = 0;
@@ -254,24 +254,26 @@ int sys_execv(char* progname, char** args, int *retval){
 
 	index = 0;
 	numindex = 0;
+	char_reset = 0;
 	while(arg_dest[index] != NULL){
-		while(arg_dest[index] != NULL){
-			size_t len = 4 - (strlen(arg_dest[index])%4);
-			/*newlen includes null chars to be copied by concat_null*/
+		size_t len = 4 - (strlen(arg_dest[index])%4);
+		/*newlen includes null chars to be copied by concat_null*/
 			
-			size_t newlen = strlen(arg_dest[index]) + len;	
-			char *temp = concat_null(arg_dest[index], len, newlen);
-			//numof4bytes holds number of 4bytes that makes up temp
-			int numof4byte = (strlen(temp) + len) / 4;
-			while(char_index < newlen){
-				char_buffer[char_index] = temp[char_index];
-				char_index++;
-			}
+		size_t newlen = strlen(arg_dest[index]) + len;	
+		char *temp = concat_null(arg_dest[index], newlen);
+		//numof4bytes holds number of 4bytes that makes up temp
+		int numof4byte = (strlen(temp) + len) / 4;
+		while(char_reset< newlen){
+			char_buffer[char_index] = temp[char_reset];
+			char_index++;
+			char_reset++;
+		}
 		//add current args number of 4 bytes to array 
 		num_of_4byte[numindex] = numof4byte;
 		numindex++;
-		index++;	
-		}
+		index++;
+		char_reset = 0; //start from beginning of new string
+		newlen = 0;
 	}
 	
 	/* "/testbin/add 1 2" has 4 ptrs */
@@ -369,11 +371,12 @@ int sys_execv(char* progname, char** args, int *retval){
 		*retval = -1;
 		return ENOMEM;
 	}
+	stackptr += usr_args_size;
 	
 	kprintf("Stackptr After copying out userpace_args: %d\n", stackptr);
 	
 	result = copyout((const void*)char_buffer, (userptr_t)stackptr,char_buffer_size);
-	
+	stackptr += char_buffer_size;
 	kprintf("Stackptr After Copying out char_buffer: %d\n", stackptr);
 	
 	stackptr -= copyout_data;
@@ -388,17 +391,22 @@ int sys_execv(char* progname, char** args, int *retval){
 	return EINVAL;
 }
 
-char * concat_null(char * str, size_t len, size_t buflen){
+char * concat_null(char * str, size_t buflen){
 	size_t index = 0;
 	char temp[buflen];
-	while(str[index] != '\0'){
+	
+	/* Null out buffer before it gets used */
+	while(index < buflen){
+		temp[index] = '\0';
+		index++;
+	}
+	
+	index = 0;	
+	while(index < strlen(str)){
 		temp[index] = str[index];
 		index++;
 	}
-	while(index < len){
-		strcat(temp, "\0");
-		index++;
-	}
+	
 	char *rtrn = temp;
 	return rtrn;
 }
