@@ -204,7 +204,6 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	return 0;
 }
 
-
 int sys_execv(char* progname, char** args, int *retval){
 	
 	struct addrspace *as;
@@ -280,7 +279,6 @@ int sys_execv(char* progname, char** args, int *retval){
 		newlen = 0;
 	}
 	
-		
 	/* Open the file. */
 	result = vfs_open(progname, O_RDONLY, 0, &v);
 	if (result) {
@@ -321,16 +319,15 @@ int sys_execv(char* progname, char** args, int *retval){
 		return result;
 	}	
 		
-	kprintf("Stackptr Before Char_index: %d\n", stackptr);
 	/* Size of char buffer and char pointers array*/
 	stackptr -= sizeof(char_buffer);
-	kprintf("Stackptr After Char_index: %d\n", stackptr);
 	
 	/* "/testbin/add 1 2" has 4 ptrs */
 	void *userspace_args[argc+1];
 
 	index = 0;
 	while(index < argc){
+
 		userspace_args[index] = (void*)stackptr;
 		stackptr += 4*num_of_4byte[index];
 		index++;
@@ -340,8 +337,6 @@ int sys_execv(char* progname, char** args, int *retval){
 	size_t usr_args_size = sizeof(userspace_args);
 	size_t char_buffer_size = sizeof(char_buffer);
 	size_t copyout_data = usr_args_size + char_buffer_size;
-	kprintf("User Arg Size %d\n", usr_args_size);
-	kprintf("Copyout Data  %d\n", copyout_data);
 	
 	
 	stackptr -= copyout_data;
