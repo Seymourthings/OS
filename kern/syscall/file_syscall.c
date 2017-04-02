@@ -15,6 +15,7 @@
 #include <file_syscall.h>
 #include <copyinout.h>
 #include <vfs.h>
+#include <vm.h>
 
 /* Write to a user file */
 
@@ -26,7 +27,7 @@ int sys_open(const char *filename, int flags, int mode, int32_t *retval){
 	char *file_dest = (char*)kmalloc(sizeof(char)*PATH_MAX);
 	
 	size_t buflen;
-
+	
 	if (filename == NULL){
 		*retval = -1;
 		kfree(file_dest);
@@ -54,15 +55,14 @@ int sys_open(const char *filename, int flags, int mode, int32_t *retval){
 		kfree(file_dest);
 		return EINVAL;
 	}
-
+	
 	//copy userlevel filename to kernel level 
-	copyinstr((const_userptr_t)filename, file_dest, PATH_MAX, &buflen);
+	err = copyinstr((const_userptr_t)filename, file_dest, PATH_MAX, &buflen);
 
-
-	if(file_dest == NULL){
+	if(err){
 		*retval = -1;
 		kfree(file_dest);
-		return EFAULT;
+		return err;
 	}
 	
 	if(strlen(file_dest) == 0){

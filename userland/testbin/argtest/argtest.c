@@ -51,6 +51,7 @@ main(int argc, char *argv[])
 
 	for (i=0; i<=argc; i++) {
 		tmp = argv[i];
+		printf("Array val: %s", tmp); 
 		if (tmp==NULL) {
 			tmp = "[NULL]";
 		}
