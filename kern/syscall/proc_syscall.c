@@ -151,7 +151,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	
 	if(status == NULL){
 		*retval = -1;
-		return EINVAL;
+		return EFAULT;
 	}
 	
 	if(options != 0){
@@ -188,7 +188,8 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	while(!proc->exited){
 		cv_wait(proc->cv, proc->lock);
 	}
-
+	lock_release(proc->lock);
+	
 	buffer = proc->exitcode;
 	err = copyout((const char*)&buffer, (userptr_t)status, sizeof(int));
 
@@ -199,7 +200,6 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	
 	*retval = pid;
 
-	lock_release(proc->lock);
 //	kfree(proc);	
 	return 0;
 }
