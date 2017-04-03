@@ -364,7 +364,7 @@ int sys_execv(char* progname, char** args, int *retval){
 char * concat_null(char * str, size_t buflen){
 	size_t index = 0;
 	char temp[buflen];
-	
+		
 	/* Null out buffer before it gets used */
 	while(index < buflen){
 		temp[index] = '\0';

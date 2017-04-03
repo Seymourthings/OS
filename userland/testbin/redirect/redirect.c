@@ -38,7 +38,6 @@
  *
  * (This test also depends on fork working properly.)
  */
-
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -140,7 +139,7 @@ cat(void)
 {
 	pid_t pid;
 	int rfd, wfd, result, status;
-	const char *args[3];
+	const char *args[2];
 
 	rfd = doopen(INFILE, O_RDONLY);
 	wfd = doopen(OUTFILE, O_WRONLY|O_CREAT|O_TRUNC);
@@ -156,9 +155,8 @@ cat(void)
 		dodup2(wfd, STDOUT_FILENO, OUTFILE);
 		doclose(rfd, INFILE);
 		doclose(wfd, OUTFILE);
-		args[0] = "dogs";
-		args[1] = "os161";
-		args[2] = NULL;
+		args[0] = "cat";
+		args[1] = NULL;
 		execv(PATH_CAT, (char **)args);
 		warn("%s: execv", PATH_CAT);
 		_exit(1);
