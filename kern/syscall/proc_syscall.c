@@ -149,8 +149,18 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	int err;
 	struct proc *proc;
 	
+	if(status == NULL){
+		*retval = 0;
+		return 0;
+	}
+	
+	if(options != 0){
+		*retval = -1;
+		return EINVAL;
+	}
+
 /*	 Checks for impossible PID's not PID's that don't exist yet */
-	if (pid < 0 || pid > PID_MAX){
+	if (pid < PID_MIN || pid > PID_MAX){
 		*retval = -1;
 		return ESRCH;
 	}else{
@@ -162,19 +172,13 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	if(proc == NULL){
 		*retval = -1;
 		return ESRCH;
-	}
-
-	if(options != 0){
-		*retval = -1;
-		return EINVAL;
-	}
+	}		
 	
 	if(pid == curproc->pid){
 		*retval = -1;
 		return ECHILD;
 	}
 		
-
 	if(curproc->pid != proc->ppid){
 		*retval = -1;
 		return ECHILD;
@@ -184,7 +188,8 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	while(!proc->exited){
 		cv_wait(proc->cv, proc->lock);
 	}
-
+	lock_release(proc->lock);
+	
 	buffer = proc->exitcode;
 	err = copyout((const char*)&buffer, (userptr_t)status, sizeof(int));
 
@@ -195,7 +200,6 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	
 	*retval = pid;
 
-	lock_release(proc->lock);
 //	kfree(proc);	
 	return 0;
 }
@@ -205,14 +209,14 @@ int sys_execv(char* progname, char** args, int *retval){
 	struct addrspace *as;
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
-	int result, index, numindex, argcount, char_buflen;
+	int result, index, numindex, argc, char_buflen;
 	size_t proglen, arglen, char_index, char_reset;
 	
 	arglen = 0;
 	index = 0;
 	char_buflen = 0;
 	char_index = 0;
-
+	
 	while(args[index] != NULL){
 		arglen += strlen(args[index]);
 		/* Will be used to make a buffer that can fit args and padding chars*/
@@ -220,13 +224,12 @@ int sys_execv(char* progname, char** args, int *retval){
 		index++; 	
 	}
 	
-	//currently holds the count of arguments - aka number of pointers
-	argcount = index;
-
+	//currently holds the count of arguments - excluding the progname
+	argc = index;
 	char prog_dest[PATH_MAX];
 	char *arg_dest[arglen], char_buffer[char_buflen];
 	//int array for args word count in terms of 4byte words arg+padding 
-	int num_of_4byte[argcount];
+	int num_of_4byte[argc];
 	/*copy in progname (PATH)*/
 	result = copyinstr((const_userptr_t)progname, prog_dest, PATH_MAX, &proglen);
 	
@@ -276,10 +279,6 @@ int sys_execv(char* progname, char** args, int *retval){
 		newlen = 0;
 	}
 	
-	/* "/testbin/add 1 2" has 4 ptrs */
-	void *userspace_args[argcount+1];
-	
-	
 	/* Open the file. */
 	result = vfs_open(progname, O_RDONLY, 0, &v);
 	if (result) {
@@ -322,9 +321,13 @@ int sys_execv(char* progname, char** args, int *retval){
 		
 	/* Size of char buffer and char pointers array*/
 	stackptr -= sizeof(char_buffer);
+	
+	/* "/testbin/add 1 2" has 4 ptrs */
+	void *userspace_args[argc+1];
 
 	index = 0;
-	while(index < argcount){
+	
+	while(index < argc){
 		userspace_args[index] = (void*)stackptr;
 		stackptr += 4*num_of_4byte[index];
 		index++;
@@ -353,7 +356,7 @@ int sys_execv(char* progname, char** args, int *retval){
 	stackptr -= copyout_data;
 	
 	/* Warp to user mode. */
-	enter_new_process(argcount /*argc*/, (userptr_t)stackptr /*userspace addr of argv*/,
+	enter_new_process(argc /*argc*/, (userptr_t)stackptr /*userspace addr of argv*/,
 			  NULL /*userspace addr of environment*/,
 			  stackptr, entrypoint);
 	/* enter_new_process does not return. */
