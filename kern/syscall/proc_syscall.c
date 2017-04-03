@@ -150,8 +150,8 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	struct proc *proc;
 	
 	if(status == NULL){
-		*retval = -1;
-		return EFAULT;
+		*retval = 0;
+		return 0;
 	}
 	
 	if(options != 0){
@@ -326,8 +326,8 @@ int sys_execv(char* progname, char** args, int *retval){
 	void *userspace_args[argc+1];
 
 	index = 0;
+	
 	while(index < argc){
-
 		userspace_args[index] = (void*)stackptr;
 		stackptr += 4*num_of_4byte[index];
 		index++;
