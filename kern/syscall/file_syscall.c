@@ -370,7 +370,7 @@ int sys_dup2(int fd, int newfd, int32_t *retval){
 	
 	if (fd == newfd){
 		*retval =-1;
-		return EPERM;
+		return EBADF;
 	}
 	
 	if(newfd < 0 || newfd >= OPEN_MAX){

@@ -142,8 +142,8 @@ syscall(struct trapframe *tf)
 	    case SYS_lseek:
 	   	err_ret = sys_lseek((int)tf->tf_a0,(((off_t)tf->tf_a2) << 32)+tf->tf_a3, 
 				   (const_userptr_t)tf->tf_sp+16, &offset);
-	    	err = err_ret << 32; //higher 32 bits
-	    	if(!err){
+		err = err_ret << 32; //higher 32 bits
+	    	if(!err_ret){
 	    		tf->tf_v1 = (int32_t)offset;
 	    	}
 	    	retval = (int32_t)(offset >> 32); //lower 32 bits
