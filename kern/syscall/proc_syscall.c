@@ -16,7 +16,9 @@
 int pid_stack[PID_MAX/2];
 int stack_index;
 pid_t g_pid;
+
 char *arg_dest[ARG_MAX];	
+//char char_buffer[ARG_MAX];
 
 /* Returns the current process's ID */
 pid_t sys_getpid(int32_t *retval){
@@ -230,7 +232,6 @@ int sys_execv(char* progname, char** args, int *retval){
 	char prog_dest[PATH_MAX];
 //	char *arg_dest[arglen], char_buffer[char_buflen];	
 	char char_buffer[char_buflen];
-
 	//int array for args word count in terms of 4byte words arg+padding 
 	int num_of_4byte[argc];
 	/*copy in progname (PATH)*/
@@ -246,6 +247,7 @@ int sys_execv(char* progname, char** args, int *retval){
 	 * Is arg_dest (which is in the kernel) pointing to 
 	 * args elements (in userspace) after copyin gets called?
 	*/
+	
 	//acquire lock to protect global variable
 	lock_acquire(curproc->lock);	
 	result = copyin((const_userptr_t)args, (void*)&arg_dest, arglen);
@@ -262,6 +264,8 @@ int sys_execv(char* progname, char** args, int *retval){
 	index = 0;
 	numindex = 0;
 	char_reset = 0;
+	//protect arg_dest
+	lock_acquire(curproc->lock);
 	while(arg_dest[index] != NULL){
 		size_t len = 4 - (strlen(arg_dest[index])%4);
 		/*newlen includes null chars to be copied by concat_null*/
@@ -282,13 +286,14 @@ int sys_execv(char* progname, char** args, int *retval){
 		char_reset = 0; //start from beginning of new string
 		newlen = 0;
 	}
+	lock_release(curproc->lock);
 	
 	/* Open the file. */
 	result = vfs_open(progname, O_RDONLY, 0, &v);
 	if (result) {
 		*retval = -1;
 		kfree(prog_dest);
-		kfree(arg_dest);
+	//	kfree(arg_dest);
 		return result;
 	}
 
