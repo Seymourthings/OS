@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
+ *Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
  *	The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -134,16 +134,16 @@ syscall(struct trapframe *tf)
 		err = sys_write((int)tf->tf_a0, (void *)tf->tf_a1, 
 				(size_t)tf->tf_a2, &retval);
 		break;
-/*
-	    case SYS___getcwd:
+
+/*	    case SYS___getcwd:
 		err = sys__getcwd((void *)tf->tf_a0, (size_t)tf->tf_a1, &retval);
-	    	break;
-  */  
+	    	break;*/
+    
 	    case SYS_lseek:
 	   	err_ret = sys_lseek((int)tf->tf_a0,(((off_t)tf->tf_a2) << 32)+tf->tf_a3, 
 				   (const_userptr_t)tf->tf_sp+16, &offset);
-		err = err_ret << 32; //higher 32 bits
-	    	if(!err_ret){
+	    	err = err_ret << 32; //higher 32 bits
+	    	if(!err){
 	    		tf->tf_v1 = (int32_t)offset;
 	    	}
 	    	retval = (int32_t)(offset >> 32); //lower 32 bits

@@ -4,6 +4,7 @@
 #include <file_syscall.h>
 #include <mips/trapframe.h>
 #include <proc.h>
+
 /* Global Semaphore for sys_exit & menu */
 extern struct semaphore * g_sem;
 
