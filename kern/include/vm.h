@@ -55,6 +55,9 @@ int vm_fault(int faulttype, vaddr_t faultaddress);
 vaddr_t alloc_kpages(unsigned npages);
 void free_kpages(vaddr_t addr);
 
+/* Initialize the coremap */
+void init_coremap(size_t ramsize, paddr_t firstpaddr);
+
 /*
  * Return amount of memory (in bytes) used by allocated coremap pages.  If
  * there are ongoing allocations, this value could change after it is returned

@@ -123,6 +123,50 @@ struct tlbshootdown {
 	int ts_placeholder;
 };
 
+/*
+ * Define macros for coremap_entry page state
+ */
+enum page_state_t {
+    PAGE_FREE,
+    PAGE_FIXED,
+    PAGE_DIRTY,
+    PAGE_CLEAN,
+};
+
+/*Is the page the root of a process' memory, or is it a child*/
+enum block_state_t {
+    BLOCK_PARENT,
+    BLOCK_CHILD,
+};
+
+
+/*Is the page recyclable. Pages for kernel, coremap are NOT */
+enum use_state_t{
+    REUSE,
+    NO_REUSE,
+};
+
+/* Define the coremap_entry structure*/
+struct coremap_entry {
+    paddr_t entry_pas; //Physical addr of entry NOT same as pas
+    struct addrspace* as; //from Blog Needed later for swapping
+    paddr_t pas; // Physical address NEEDED FOR freaa_kpages()
+    vaddr_t vas; // Virtual address
+    //flags
+    int block_size;
+    enum page_state_t pg_state;
+    enum block_state_t blk_state;
+    enum use_state_t use_state;
+    //Chunk size -> see alis last reciation
+};
+
+extern struct spinlock coremap_spinlock;
+extern int NUM_ENTRIES;
+extern struct coremap_entry *coremap;
+
+/*** to pass "not-dumbvm" condition ***/
+extern int bytes_left; //Bytes in coremap left (x%PAGE_SIZE==0)
+
 #define TLBSHOOTDOWN_MAX 16
 
 
