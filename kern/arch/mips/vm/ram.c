@@ -46,6 +46,7 @@ void
 ram_bootstrap(void)
 {
 	size_t ramsize;
+	paddr_t temp;
 
 	/* Get size of RAM. */
 	ramsize = mainbus_ramsize();
@@ -68,9 +69,13 @@ ram_bootstrap(void)
 	 * Convert to physical address.
 	 */
 	firstpaddr = firstfree - MIPS_KSEG0;
+	temp = firstpaddr;
 
 	kprintf("%uk physical memory available\n",
 		(lastpaddr-firstpaddr)/1024);
+
+	init_coremap(ramsize, temp);
+	firstpaddr = temp;
 }
 
 /*
