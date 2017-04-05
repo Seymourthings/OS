@@ -106,6 +106,7 @@ int sys_open(const char *filename, int flags, int mode, int32_t *retval){
 	
 	curproc->file_table[fd]->offset = 0;
 	curproc->file_table[fd]->flags = flag_val;
+
 	curproc->file_table[fd]->count++;
 	lock_release(curproc->file_table[fd]->lock);
 	
@@ -366,7 +367,7 @@ int sys_dup2(int fd, int newfd, int32_t *retval){
 	
 	if (fd == newfd){
 		*retval =-1;
-		return EPERM;
+		return EBADF;
 	}
 	
 	if(newfd < 0 || newfd >= OPEN_MAX){
@@ -387,19 +388,17 @@ int sys_dup2(int fd, int newfd, int32_t *retval){
 	int err = 0;
 
 	/* If this fd has never been used, allocate space for it */
-	if(curproc->file_table[newfd] == NULL){
-		curproc->file_table[newfd] = (struct file_handle *)kmalloc(sizeof(struct file_handle*));
-	
-	} else{
+	if(curproc->file_table[newfd] != NULL){
 		err = sys_close(newfd, retval);
-		curproc->file_table[newfd] = curproc->file_table[fd];	
-	}
+		if (err){
+			*retval = -1;
+			return EBADF;
+                }
+        }
 	
-	if (err){
-		*retval = -1;
-		return EBADF;
-	}
+	curproc->file_table[newfd] = curproc->file_table[fd];	
 
+	curproc->file_table[newfd]->count++;
 	*retval = newfd;
 	return 0;
 }
