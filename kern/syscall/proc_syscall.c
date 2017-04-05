@@ -16,6 +16,7 @@
 int pid_stack[PID_MAX/2];
 int stack_index;
 pid_t g_pid;
+char *arg_dest[ARG_MAX/64];
 
 /* Returns the current process's ID */
 pid_t sys_getpid(int32_t *retval){
@@ -227,7 +228,7 @@ int sys_execv(char* progname, char** args, int *retval){
 	//currently holds the count of arguments - excluding the progname
 	argc = index;
 	char prog_dest[PATH_MAX];
-	char *arg_dest[arglen], char_buffer[char_buflen];
+	char char_buffer[char_buflen];
 	//int array for args word count in terms of 4byte words arg+padding 
 	int num_of_4byte[argc];
 	/*copy in progname (PATH)*/
@@ -243,13 +244,14 @@ int sys_execv(char* progname, char** args, int *retval){
 	 * Is arg_dest (which is in the kernel) pointing to 
 	 * args elements (in userspace) after copyin gets called?
 	*/
-	
+	lock_acquire(curproc->lock);	
 	result = copyin((const_userptr_t)args, (void*)&arg_dest, arglen);
 	if(result){
 		*retval = -1;
+		lock_release(curproc->lock);
 		return ENOMEM;
 	}
-	
+	lock_release(curproc->lock);
 	/* The one about the null padding 
 	 * After this char_buffer is an array of chars
 	 * with null padding	
