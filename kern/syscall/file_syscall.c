@@ -282,6 +282,7 @@ off_t sys_lseek(int fd, off_t pos, const_userptr_t whence, off_t *offset){
 
 	if(curproc->file_table[fd]->vnode->vn_ops == (void *)0xdeadbeef){
 		*offset = -1;
+	        lock_release(curproc->file_table[fd]->lock);
         	return EBADF;
     	}
 
@@ -295,12 +296,13 @@ off_t sys_lseek(int fd, off_t pos, const_userptr_t whence, off_t *offset){
 
 	if(curproc->file_table[fd]->vnode == NULL){
 	        *offset = -1;
+	        lock_release(curproc->file_table[fd]->lock);
         	return EINVAL;
     	}
 
 	if(!curproc->file_table[fd]->vnode->vn_refcount > 0){
-        	lock_release(curproc->file_table[fd]->lock);
 		*offset = -1;
+        	lock_release(curproc->file_table[fd]->lock);
 	       	return EINVAL;
     	}
 
@@ -320,17 +322,28 @@ off_t sys_lseek(int fd, off_t pos, const_userptr_t whence, off_t *offset){
 	            VOP_STAT(curproc->file_table[fd]->vnode, &stat);
         	    curproc->file_table[fd]->offset  = stat.st_size + pos;
 	            break;
-        	}    
+        	}
+		default:
+		
+       		    lock_release(curproc->file_table[fd]->lock);
+		    return EINVAL;
+			    
     	}
 
 	bool err = VOP_ISSEEKABLE(curproc->file_table[fd]->vnode);
 	    if (!err){
-	    	*offset = -1;
-        	return *offset;
+	    	*offset = -1;	
+        	lock_release(curproc->file_table[fd]->lock);
+        	return ESPIPE;
     	}	
 
     	*offset = curproc->file_table[fd]->offset;
     	lock_release(curproc->file_table[fd]->lock);
+	if(*offset < 0){
+		*offset = -1;
+		return EINVAL;
+	}
+
     	return 0;
 }
 

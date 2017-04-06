@@ -206,7 +206,42 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 }
 
 int sys_execv(char* progname, char** args, int *retval){
+
+	unsigned int testprogname = (unsigned int)progname;	
+	unsigned int testargs = (unsigned int)args;
+	unsigned int testarg;
 	
+	if(progname == NULL){
+		*retval = -1;
+		return EFAULT;
+
+	}
+
+	if(args == NULL){
+		*retval = -1;
+		return EFAULT;
+
+	}
+
+
+	if(testprogname == 0x40000000 || testprogname >= 0x80000000){
+		*retval = -1;
+		return EFAULT;
+	}
+
+	
+	if(testargs == 0x40000000 || testargs >= 0x80000000){
+		*retval = -1;
+		return EFAULT;
+	}
+
+
+	if(strlen(progname) == 0){
+		*retval = -1;
+		return EISDIR;
+	
+	}
+
 	struct addrspace *as;
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
@@ -219,6 +254,14 @@ int sys_execv(char* progname, char** args, int *retval){
 	char_index = 0;
 	
 	while(args[index] != NULL){
+
+		testarg = (unsigned int)args[index];
+		
+		if(testarg == 0x40000000 || testarg >= 0x80000000){
+			*retval = -1;
+			return EFAULT;
+		}
+		
 		arglen += strlen(args[index]);
 		/* Will be used to make a buffer that can fit args and padding chars*/
 		char_buflen += strlen(args[index])  +  (4 - (strlen(args[index])%4));
