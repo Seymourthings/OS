@@ -366,7 +366,7 @@ int sys__getcwd(void *buf, size_t buflen, int32_t *retval){
 //	-- Does this null terminate the string? --
 	//buf[buflen] = '\0';
 	
-	*retval = strlen(buf);
+	*retval = buflen - uio.uio_resid;
 	return 0;
 }
 
