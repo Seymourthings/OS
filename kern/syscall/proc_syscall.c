@@ -206,6 +206,11 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 }
 
 int sys_execv(char* progname, char** args, int *retval){
+	struct addrspace *as;
+	struct vnode *v;
+	vaddr_t entrypoint, stackptr;
+	int result, index, numindex, argc, char_buflen;
+	size_t proglen, arglen, char_index, char_reset, arg_pointer_count;
 
 	unsigned int testprogname = (unsigned int)progname;	
 	unsigned int testargs = (unsigned int)args;
@@ -236,23 +241,27 @@ int sys_execv(char* progname, char** args, int *retval){
 	}
 
 
-	if(strlen(progname) == 0){
+	if(sizeof(progname) == 0){
 		*retval = -1;
 		return EISDIR;
 	
 	}
-
-	struct addrspace *as;
-	struct vnode *v;
-	vaddr_t entrypoint, stackptr;
-	int result, index, numindex, argc, char_buflen;
-	size_t proglen, arglen, char_index, char_reset;
-	
+		
 	arglen = 0;
 	index = 0;
 	char_buflen = 0;
 	char_index = 0;
-	
+	arg_pointer_count = sizeof(args);
+
+	size_t pointer_index = 0;
+	char *arg_strings[64];
+		
+	result = copyin((const_userptr_t)args, (void*)&arg_strings[pointer_index], arg_pointer_count);
+	if(result){
+		*retval = -1;
+		return ENOMEM;
+	}
+
 	while(args[index] != NULL){
 
 		testarg = (unsigned int)args[index];
@@ -295,6 +304,8 @@ int sys_execv(char* progname, char** args, int *retval){
 		return ENOMEM;
 	}
 	lock_release(curproc->lock);
+
+
 	/* The one about the null padding 
 	 * After this char_buffer is an array of chars
 	 * with null padding	
