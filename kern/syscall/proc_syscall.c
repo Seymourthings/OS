@@ -239,14 +239,7 @@ int sys_execv(char* progname, char** args, int *retval){
 		*retval = -1;
 		return EFAULT;
 	}
-
-
-	if(sizeof(progname) == 0){
-		*retval = -1;
-		return EISDIR;
 	
-	}
-		
 	arglen = 0;
 	index = 0;
 	char_buflen = 0;
@@ -260,6 +253,12 @@ int sys_execv(char* progname, char** args, int *retval){
 	if(result){
 		*retval = -1;
 		return ENOMEM;
+	}
+
+	if(strlen(progname) == 0){
+		*retval = -1;
+		return EISDIR;
+	
 	}
 
 	while(args[index] != NULL){
