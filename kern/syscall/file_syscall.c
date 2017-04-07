@@ -347,7 +347,7 @@ off_t sys_lseek(int fd, off_t pos, const_userptr_t whence, off_t *offset){
     	return 0;
 }
 
-/*int sys__getcwd(void *buf, size_t buflen, int32_t *retval){
+int sys__getcwd(void *buf, size_t buflen, int32_t *retval){
 	
 	struct uio uio;
 	struct iovec iovec;
@@ -355,20 +355,20 @@ off_t sys_lseek(int fd, off_t pos, const_userptr_t whence, off_t *offset){
 		*retval = -1;
 		return EFAULT;
 	}
-	-- Copies buf data into UIO --
-	uio_uinit(&iovec, &uio, buf, buflen-1, (off_t)0, UIO_READ);
+//	-- Copies buf data into UIO --
+	uio_uinit(&iovec, &uio, (userptr_t)buf, buflen, (off_t)0, UIO_READ);
 	int err = vfs_getcwd(&uio);
 	if (err) {
 		*retval = -1;
 		return EFAULT;
 	}
 	//Idea is right but not null terminating string 
-	-- Does this null terminate the string? --
+//	-- Does this null terminate the string? --
 	//buf[buflen] = '\0';
 	
 	*retval = strlen(buf);
 	return 0;
-}*/
+}
 
 int sys_dup2(int fd, int newfd, int32_t *retval){
 
