@@ -56,7 +56,7 @@ vaddr_t alloc_kpages(unsigned npages);
 void free_kpages(vaddr_t addr);
 
 /* Initialize the coremap */
-//void init_coremap(size_t ramsize, paddr_t firstpaddr);
+void init_coremap(size_t ramsize, paddr_t firstpaddr);
 
 /*
  * Return amount of memory (in bytes) used by allocated coremap pages.  If

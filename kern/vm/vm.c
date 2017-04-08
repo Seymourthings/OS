@@ -4,19 +4,19 @@
 #include <spinlock.h>
 #include <mainbus.h>
 
-/*struct coremap_entry *coremap;
+struct coremap_entry *coremap;
 int NUM_ENTRIES;
 struct spinlock coremap_spinlock = SPINLOCK_INITIALIZER;
 int bytes_left;
 
-* VM functions *
+/* VM functions */
 
 void vm_bootstrap()
 {
-    * implement*
+    /* implement*/
 }
 
-* Allocate/free some kernel-space virtual pages *
+/* Allocate/free some kernel-space virtual pages */
 vaddr_t
 alloc_kpages(unsigned npages)
 {
@@ -114,7 +114,7 @@ void
 vm_tlbshootdown(const struct tlbshootdown *ts)
 {
 	(void)ts;
-	* Implement * 
+	/* Implement */
 }
 
 int
@@ -177,4 +177,4 @@ init_coremap(size_t ramsize, paddr_t firstpaddr){
 	bytes_left -= firstpaddr;
 
 	spinlock_release(&coremap_spinlock);
-}*/
+}
