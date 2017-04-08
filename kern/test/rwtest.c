@@ -284,8 +284,8 @@ int rwtest3(int nargs, char **args) {
 	rwlock_release_write(testrw);
 	if(testrw->rw_sem->sem_count == 0){
 		test_status = TEST161_SUCCESS;
-	}*/
-	success(test_status,SECRET, "rwt3");
+	}
+	success(test_status,SECRET, "rwt3");*/
 
 	return 0;
 }
