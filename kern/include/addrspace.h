@@ -58,7 +58,12 @@ struct addrspace {
         size_t as_npages2;
         paddr_t as_stackpbase;
 #else
-        /* Put stuff here for your VM system */
+	/* Put stuff here for your VM system */
+	vaddr_t region_start;
+	size_t region_pages;
+	/* Region Permission */
+	struct page_entry *page_table;
+	
 #endif
 };
 
