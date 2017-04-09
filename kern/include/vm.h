@@ -68,38 +68,4 @@ unsigned int coremap_used_bytes(void);
 /* TLB shootdown handling called from interprocessor_interrupt */
 void vm_tlbshootdown(const struct tlbshootdown *);
 
-enum page_valid_bit{
-	VALID,
-	INVALID,
-};
-
-enum page_referenced{
-	RECENT,
-	NOT_RECENT,
-};
-
-enum page_permissions{
-	NONE,		//0
-	RD, 		//1
-	WR,		//2
-	EX,		//3
-	RD_WR,		//4
-	RD_EX,		//5
-	WR_EX,		//6
-	ALL,		//7
-};
-
-
-struct page_entry *page_table; //head of the page_table linked list
-
-/* Page Table */
-struct page_entry{
-	vaddr_t vpn; 	//top 20 bits
-	paddr_t pas; 	//physical page location on disk
-	enum page_state_t state;
-	enum page_valid_bit valid;
-	enum page_referenced activity;
-	enum page_permissions permission; 
-};
-
 #endif /* _VM_H_ */

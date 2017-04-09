@@ -1,80 +1,85 @@
 #include <pagetable.h>
 #include <types.h>
-#include <kern/errno.h>
-#include <spl.h>
-#include <proc.h>
-#include <current.h>
-#include <addrspace.h>
-#include <vnode.h>
-#include <kern/unistd.h>
-#include <proc_syscall.h>
-#include <kern/wait.h>
 #include <lib.h>
-#include <copyinout.h>
-#include <kern/fcntl.h>
-#include <vfs.h>
-#include <syscall.h>
 
-pagetable * pagetable_init(void){
-	pagetable *head = NULL;
-	head = kmalloc(sizeof(pagetable));
-	head->val = 1;
+pagetable_node * pagetable_init(void){
+//	int index;
+
+	pagetable_node *head = NULL;
+
+	/*initialize head node fields */
+	head = kmalloc(sizeof(pagetable_node));
+	head->page_entry = kmalloc(sizeof(struct page_entry));	
+	head->page_entry->vpn = 101;
+	head->page_entry->pas = 201;
+	head->page_entry->state = MEM;
+	head->page_entry->permission = NONE;
+	head->page_entry->activity = NO_RECENT_WR;
 	head->next = NULL;
+
+	/* 1 to 1 mapping of virtual addresses to physical
+	 * NUM_ENTRIES = 256
+	 * Allocate space for 256 page entries and add them to list
+	 */
+	
+	struct page_entry *page_entry;
+	page_entry = kmalloc(sizeof(*page_entry));
+	push(&head, page_entry);
+	kprintf("Pushing the second node on....");
+	struct page_entry *page_entry1;
+	page_entry1 = kmalloc(sizeof(*page_entry1));
+	push(&head, page_entry1);
+
+	/*index = 0;
+	while(index < NUM_ENTRIES){
+	index++;
+	}*/
 	return head;
 }
 
 
-void print_list(pagetable *head){
-	pagetable *current = head;
-	
+void print_list(pagetable_node *head){
+	pagetable_node *current = head;
+
+	//getting stuck in this print for some reason	
 	while(current != NULL){
-		kprintf("%d\n", current->val);
+		kprintf("%d\n", current->page_entry->vpn);
 		current = current->next;
 		
 	}
+}
+
+void push(pagetable_node **head, struct page_entry *page_entry){
+//	(void)page_entry;
+	pagetable_node *new_pagetable_node;
+	new_pagetable_node = kmalloc(sizeof(pagetable_node));
 	
-}
-
-void push(pagetable **head, int val){
-	pagetable *new_pagetable;
-	new_pagetable = kmalloc(sizeof(pagetable));
-
-
-	new_pagetable->val = val;
-	new_pagetable->next = *head;
-	*head = new_pagetable;
-}
-
-int pop(pagetable **head){
-	int retval = -1;
-	pagetable *next = NULL;
-
-	if(*head == NULL){
-		return -1;
-	}
-
-	next = (*head)->next;
-	retval = (*head)->val;
-	kfree(*head);
-	*head = next;
+	new_pagetable_node->page_entry = kmalloc(sizeof(*page_entry));
+	new_pagetable_node->page_entry = page_entry;
+	new_pagetable_node->page_entry->vpn = 101;
+	new_pagetable_node->page_entry->pas = 201;
+	new_pagetable_node->page_entry->state = MEM;
+	new_pagetable_node->page_entry->activity = NO_RECENT_WR;
+	new_pagetable_node->page_entry->permission = NONE;
 	
-	return retval;
+	new_pagetable_node->next = *head;
+	*head = new_pagetable_node;
 }
 
-void remove(pagetable **head, int n){
+void remove(pagetable_node **head, struct page_entry *page_entry){
 
-	pagetable *current = *head;
-	pagetable *temp = NULL;
+	pagetable_node *current = *head;
+	pagetable_node *temp = NULL;
 
 	while(current != NULL){
-		if(current->next->val == n){
+		/* To be fixed when page entry gets set up with addr */
+		/*if(current->next->page_entry == n){
 			temp = current->next;
 			current->next = temp->next;
 			break;
-		}
+		}*/
 		current = current->next;
 	}
-	
+	(void)page_entry;	
 	kfree(temp);
-
 }

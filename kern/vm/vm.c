@@ -129,13 +129,13 @@ vm_fault(int faulttype, vaddr_t faultaddress){
 void 
 init_coremap(size_t ramsize, paddr_t firstpaddr){
 	bytes_left = ramsize;
-	NUM_ENTRIES = ramsize / PAGE_SIZE; // round vDOWNv
-
+	NUM_ENTRIES = ramsize / PAGE_SIZE; // 256 entries - pgs are 4K
+	
 	//How many pages do our coremap_spinlock & coremap take?
 	size_t spinlock_pgs;
 	spinlock_pgs = (sizeof(struct spinlock)+PAGE_SIZE-1) / PAGE_SIZE; // Round ^UP^
 	size_t coremap_pgs;
-	coremap_pgs = ((sizeof(struct coremap_entry)*NUM_ENTRIES)+PAGE_SIZE-1)/ PAGE_SIZE; // Round ^UP^
+	coremap_pgs = ((sizeof(struct coremap_entry)*NUM_ENTRIES)+PAGE_SIZE-1)/ PAGE_SIZE; // Round UP
 
 	// firstpaddr should be moved up beyond coremap & spinlock
 	firstpaddr += spinlock_pgs*PAGE_SIZE;

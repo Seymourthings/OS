@@ -40,11 +40,12 @@
 #include <test.h>
 #include <kern/test161.h>
 #include <mainbus.h>
-#include <pagetable.h>
 #include "opt-dumbvm.h"
+#include <pagetable.h>
 
 // from arch/mips/vm/ram.c
 extern vaddr_t firstfree;
+pagetable_node * pagetable_init(void); 
 
 ////////////////////////////////////////////////////////////
 // km1/km2
@@ -115,24 +116,17 @@ kmalloctest(int nargs, char **args)
 {
 	(void)nargs;
 	(void)args;
-
+		
 	kprintf("Starting kmalloc test...\n");
 	kmallocthread(NULL, 0);
 	kprintf("\n");
 	success(TEST161_SUCCESS, SECRET, "km1");
 	
-	
-	pagetable *head = pagetable_init();
+	kprintf("Starting Pagetable Init...\n");
+	pagetable_node *head = pagetable_init();
+	kprintf("Printing .... \n");
 	print_list(head);
-	push(&head,2);
-	print_list(head);
-	push(&head,11);
-	print_list(head);
-	push(&head,10);
-	push(&head,22);
-	print_list(head);
-	remove(&head,11);
-	print_list(head);
+
 	return 0;
 }
 
