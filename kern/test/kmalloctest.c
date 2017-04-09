@@ -40,7 +40,7 @@
 #include <test.h>
 #include <kern/test161.h>
 #include <mainbus.h>
-
+#include <pagetable.h>
 #include "opt-dumbvm.h"
 
 // from arch/mips/vm/ram.c
@@ -120,7 +120,19 @@ kmalloctest(int nargs, char **args)
 	kmallocthread(NULL, 0);
 	kprintf("\n");
 	success(TEST161_SUCCESS, SECRET, "km1");
-
+	
+	
+	pagetable *head = pagetable_init();
+	print_list(head);
+	push(&head,2);
+	print_list(head);
+	push(&head,11);
+	print_list(head);
+	push(&head,10);
+	push(&head,22);
+	print_list(head);
+	remove(&head,11);
+	print_list(head);
 	return 0;
 }
 

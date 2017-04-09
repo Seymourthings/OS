@@ -3,7 +3,7 @@
 #include <vm.h>
 #include <spinlock.h>
 #include <mainbus.h>
-
+#include <pagetable.h>
 struct coremap_entry *coremap;
 int NUM_ENTRIES;
 struct spinlock coremap_spinlock = SPINLOCK_INITIALIZER;
@@ -20,6 +20,8 @@ void vm_bootstrap()
 vaddr_t
 alloc_kpages(unsigned npages)
 {
+
+	
     // Critical section. Protect the coremap
     spinlock_acquire(&coremap_spinlock); 
 
