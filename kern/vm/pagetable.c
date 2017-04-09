@@ -3,7 +3,7 @@
 #include <lib.h>
 
 pagetable_node * pagetable_init(void){
-//	int index;
+	int index;
 
 	pagetable_node *head = NULL;
 
@@ -22,18 +22,13 @@ pagetable_node * pagetable_init(void){
 	 * Allocate space for 256 page entries and add them to list
 	 */
 	
-	struct page_entry *page_entry;
-	page_entry = kmalloc(sizeof(*page_entry));
-	push(&head, page_entry);
-	kprintf("Pushing the second node on....");
-	struct page_entry *page_entry1;
-	page_entry1 = kmalloc(sizeof(*page_entry1));
-	push(&head, page_entry1);
-
-	/*index = 0;
+	index = 0;
 	while(index < NUM_ENTRIES){
-	index++;
-	}*/
+		struct page_entry *page_entry;
+		page_entry = kmalloc(sizeof(*page_entry));
+		push(&head, page_entry);
+		index++;
+	}
 	return head;
 }
 
