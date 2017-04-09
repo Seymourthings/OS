@@ -54,5 +54,14 @@ void print_list(pagetable_node *head);
 /* Add To Beginning of Linked List */
 void push(pagetable_node **head, struct page_entry *);
 
-/* Remove Specific Item From Linked List */
-void remove(pagetable_node **head, struct page_entry *);
+/* Remove Specific Page Entry From Linked List
+ *  (tbd what value will be passed) 
+ */
+void remove(pagetable_node **head, vaddr_t va);
+
+pagetable_node * destroy_pagetable(pagetable_node *);
+
+/* Pop's the head off and updates it,
+ * helper function for destroy_pagetable 
+ */
+pagetable_node * pop(pagetable_node **head);

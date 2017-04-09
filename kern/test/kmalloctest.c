@@ -126,7 +126,10 @@ kmalloctest(int nargs, char **args)
 	pagetable_node *head = pagetable_init();
 	kprintf("Printing .... \n");
 	print_list(head);
-
+	kprintf("Removing a node...\n");
+	remove(&head,102);
+	head = destroy_pagetable(head);
+	print_list(head);
 	return 0;
 }
 
