@@ -17,13 +17,13 @@ pagetable_node * pagetable_init(void){
 	head->page_entry->activity = NO_RECENT_WR;
 	head->next = NULL;
 
-	/* 1 to 1 mapping of virtual addresses to physical
-	 * NUM_ENTRIES = 256
-	 * Allocate space for 256 page entries and add them to list
+	/* Per TA - only need around 18 pages per process
+	 * Don't want to give each process access to all 256 entires
+	 * Allocate space for 18 page entries and add them to list
 	 */
 	
 	index = 0;
-	while(index < 2){
+	while(index < 17){
 		struct page_entry *page_entry;
 		page_entry = kmalloc(sizeof(*page_entry));
 		push(&head, page_entry);

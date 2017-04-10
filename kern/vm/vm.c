@@ -16,6 +16,8 @@ void vm_bootstrap()
     /* implement*/
 }
 
+/* We need to make alloc_upages and free_upages functions */
+
 /* Allocate/free some kernel-space virtual pages */
 vaddr_t
 alloc_kpages(unsigned npages)

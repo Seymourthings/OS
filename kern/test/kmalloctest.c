@@ -130,6 +130,7 @@ kmalloctest(int nargs, char **args)
 	remove(&head,102);
 	head = destroy_pagetable(head);
 	print_list(head);
+	kfree(head);
 	return 0;
 }
 
