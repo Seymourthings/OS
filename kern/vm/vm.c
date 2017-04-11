@@ -4,6 +4,7 @@
 #include <spinlock.h>
 #include <mainbus.h>
 #include <pagetable.h>
+
 struct coremap_entry *coremap;
 int NUM_ENTRIES;
 struct spinlock coremap_spinlock = SPINLOCK_INITIALIZER;
@@ -27,8 +28,7 @@ alloc_kpages(unsigned npages)
     // Critical section. Protect the coremap
     spinlock_acquire(&coremap_spinlock); 
 
-    vaddr_t va; // What were returning
-    //loop through coremap and find n contiguous free pages
+    vaddr_t va; // What we're returning
 
     // Theres not enough free pages to allocate
     if((int)(npages*PAGE_SIZE) > bytes_left || npages==0){
@@ -37,6 +37,7 @@ alloc_kpages(unsigned npages)
         return va;
     }
 
+    //loop through coremap and find n contiguous free pages
     for(int i=0; i<NUM_ENTRIES; i++) {
         if(coremap[i].pg_state == PAGE_FREE && coremap[i].use_state == REUSE){
             unsigned cont = 0;
@@ -71,7 +72,6 @@ alloc_kpages(unsigned npages)
     return va;
 }
 
-
 void
 free_kpages(vaddr_t addr)
 {
@@ -105,6 +105,99 @@ free_kpages(vaddr_t addr)
     spinlock_release(&coremap_spinlock);
 	(void)addr;
 }
+
+/* I believe these will access the page table instead of the coremap
+vaddr_t
+alloc_upages(unsigned npages)
+{
+
+    vaddr_t va; // What we're returning
+
+    // Theres not enough free pages to allocate
+    if((int)(npages*PAGE_SIZE) > bytes_left || npages==0){
+        va = 0;
+        return va;
+    }
+	
+	//loop through page_table and find free pages 
+	struct pagetable_node *iterator;
+	iterator = head;
+	while(iterator != NULL){
+		if(iterator->page_entry.state == MEM){
+			// a little lost here
+			va = iterator->page_entry->vpn + pas (offset)? 
+		}
+	}
+
+	for(int i=0; i<NUM_ENTRIES; i++) {
+        if(coremap[i].pg_state == PAGE_FREE && coremap[i].use_state == REUSE){
+            unsigned cont = 0;
+            for(; cont<npages; cont++){
+                if(coremap[i+cont].pg_state != PAGE_FREE || coremap[i+cont].use_state != REUSE){
+                    i+=cont;
+                    break;
+                }
+            }
+            if(cont==npages){
+                va = coremap[i].vas;
+                for(unsigned n=0; n<npages; n++){
+                    if(n==0){
+                        coremap[i+n].blk_state = BLOCK_PARENT;
+                    }
+                    else{
+                        coremap[i+n].blk_state = BLOCK_CHILD;
+                    }
+                    coremap[i+n].block_size = npages;
+                    coremap[i+n].pg_state = PAGE_FIXED;
+                    coremap[i+n].use_state = REUSE;
+                }
+                // Update bytes_left
+                bytes_left -= (npages*PAGE_SIZE);
+                spinlock_release(&coremap_spinlock);
+                return va;
+            }
+        }
+    }
+    va = 0;
+    spinlock_release(&coremap_spinlock);
+    return va;
+}*/
+
+/*
+void
+free_upages(vaddr_t addr)
+{
+
+    // Critical section. Protect the coremap
+    spinlock_acquire(&coremap_spinlock);
+   
+    //NEW STUFF
+    int i = 0;
+    for(; i<NUM_ENTRIES; i++){
+        if(addr == coremap[i].vas){
+            if(coremap[i].blk_state==BLOCK_CHILD || coremap[i].use_state==NO_REUSE){
+                break; //Fail
+            }
+            int n = coremap[i].block_size;
+            int npages = coremap[i].block_size;
+            while(n>0){
+                coremap[i].as = NULL;
+                coremap[i].block_size = 0;
+                coremap[i].pg_state = PAGE_FREE;
+                coremap[i].blk_state = BLOCK_CHILD;
+                n--;
+                i++;
+            }
+            if(n==0){
+                bytes_left += (npages*PAGE_SIZE);
+            }
+        }
+    }
+
+    spinlock_release(&coremap_spinlock);
+	(void)addr;
+}
+*/
 
 unsigned
 int
@@ -161,6 +254,7 @@ init_coremap(size_t ramsize, paddr_t firstpaddr){
 		coremap[i].entry_pas = entrypaddr;
 		coremap[i].as = NULL;
 		coremap[i].pas = pg_paddr;
+		//kprintf("Coremap[index].pas: %d\n", coremap[i].pas);
 		coremap[i].vas = PADDR_TO_KVADDR(pg_paddr);
 		coremap[i].block_size = 0;
 		coremap[i].pg_state = PAGE_FREE;

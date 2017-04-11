@@ -1,67 +1,66 @@
 #include <types.h>
 #include <vm.h>
 
-/* Page Table (Linked List) */
-enum page_valid_bit{
-	VALID,
-	INVALID,
-};
-enum page_referenced{
-	NO_RECENT_WR,
-	RECENT_WR,
-};
+/* Permissions */
+#define NONE		'0'
+#define RD		'1'
+#define	WR		'2'
+#define	EX		'3'
+#define	RD_WR		'4'
+#define	RD_EX		'5'
+#define	WR_EX		'6'
+#define	ALL		'7'
 
-enum page_state{
-	MEM,
-	DISK,
-};
+/* Page State */
+#define	MEM		'0'
+#define	DISK		'1'
+	
+/* Page Valid Bit */
+#define	VALID		'0'
+#define INVALID 	'1'
 
-enum page_permissions{
-	NONE,		//0
-	RD, 		//1
-	WR,		//2
-	EX,		//3
-	RD_WR,		//4
-	RD_EX,		//5
-	WR_EX,		//6
-	ALL,		//7
-};
+/* Page Referenced */
+#define	NO_RECENT_WR	'0'
+#define RECENT_WR	'1'
 
+/* Indices into Metadata ARRAY */
+#define PERMISSION	'0' 
+#define STATE		'1'
+#define	VALID_BIT	'2'
+#define REFERENCED	'3'
+	
+/* Page Table (Linked List) 
+ * Head of the table
+ */
+extern struct page_entry *page_table;
 
-struct page_entry *page_table; //head of the page_table linked list
-
-/* Page Table */
-struct page_entry{
+typedef struct page_entry{
 	vaddr_t vpn; 	//top 20 bits
 	paddr_t pas; 	//physical page location on disk
-	enum page_state state;
-	enum page_valid_bit valid;
-	enum page_referenced activity;
-	enum page_permissions permission; 
-};
+	
+	/*Order goes Permission, State, Valid, Referenced */
+	char metadata[4];
+	struct page_entry *next;
 
-typedef struct pagetable_node{
-	struct page_entry *page_entry;
-	struct pagetable_node *next;
+}page_entry;
 
-}pagetable_node;
 
-pagetable_node * pagetable_init(void); 
+page_entry * pagetable_init(void); 
 
 /* Print Linked List */
-void print_list(pagetable_node *head);
+void print_list(page_entry *head);
 
 /* Add To Beginning of Linked List */
-void push(pagetable_node **head, struct page_entry *);
+void push(page_entry **head);
 
 /* Remove Specific Page Entry From Linked List
  *  (tbd what value will be passed) 
  */
-void remove(pagetable_node **head, vaddr_t va);
+void remove(page_entry **head, vaddr_t va);
 
-pagetable_node * destroy_pagetable(pagetable_node *);
+page_entry * destroy_pagetable(page_entry *);
 
 /* Pop's the head off and updates it,
  * helper function for destroy_pagetable 
  */
-pagetable_node * pop(pagetable_node **head);
+page_entry * pop(page_entry **head);
