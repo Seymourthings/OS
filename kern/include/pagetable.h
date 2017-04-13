@@ -39,7 +39,7 @@ typedef struct page_entry{
 	paddr_t pas; 	//physical page location on disk
 	
 	/*Order goes Permission, State, Valid, Referenced */
-	char metadata[4];
+	int permissions;
 	struct page_entry *next;
 
 }page_entry;
@@ -53,10 +53,15 @@ void print_list(page_entry *head);
 /* Add To Beginning of Linked List */
 void push(page_entry **head);
 
+page_entry * find_vaddr(page_entry *, vaddr_t va);
+
 /* Remove Specific Page Entry From Linked List
  *  (tbd what value will be passed) 
  */
 void remove(page_entry **head, vaddr_t va);
+
+int concat_permissions(int read, int write, int exec);
+int * get_permissions(int concat);
 
 page_entry * destroy_pagetable(page_entry *);
 

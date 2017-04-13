@@ -19,16 +19,59 @@ void vm_bootstrap()
 
 /* We need to make alloc_upages and free_upages functions */
 
-/* Allocate/free some kernel-space virtual pages */
+/* Allocate/free some kernel-space virtual pages
+paddr_t
+get_ppages(unsigned npages){
+	
+	paddr_t pa;
+	// Critical section. Protect the coremap
+	spinlock_acquire(&coremap_spinlock);
+	
+	if((int)(npages*PAGE_SIZE) > bytes_left || npages==0){
+        	pa = 0;
+		spinlock_release(&coremap_spinlock);
+        	return pa;
+	}
+	for(int i=0; i<NUM_ENTRIES; i++) {
+		if(coremap[i].pg_state == PAGE_FREE && coremap[i].use_state == REUSE){
+		for( unsigned cont = 0; cont<npages; cont++){
+			if(coremap[i+cont].pg_state != PAGE_FREE || coremap[i+cont].use_state != REUSE){
+			i+=cont;
+			break;
+			}
+		}
+		if(cont==npages){
+			va = coremap[i].vas;
+			for(unsigned n=0; n<npages; n++){
+				if(n==0){
+				coremap[i+n].blk_state = BLOCK_PARENT;
+			}
+			else{
+				coremap[i+n].blk_state = BLOCK_CHILD;
+			}
+			coremap[i+n].block_size = npages;
+			coremap[i+n].pg_state = PAGE_FIXED;
+			coremap[i+n].use_state = REUSE;
+		}
+		// Update bytes_left
+		bytes_left -= (npages*PAGE_SIZE);
+		spinlock_release(&coremap_spinlock);
+		return va;
+            }
+        }
+    }
+
+
+
+}*/
+
 vaddr_t
 alloc_kpages(unsigned npages)
 {
-
-	
-    // Critical section. Protect the coremap
+ // Critical section. Protect the coremap
     spinlock_acquire(&coremap_spinlock); 
 
-    vaddr_t va; // What we're returning
+       vaddr_t va; // What we're returning
 
     // Theres not enough free pages to allocate
     if((int)(npages*PAGE_SIZE) > bytes_left || npages==0){

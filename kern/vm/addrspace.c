@@ -33,6 +33,7 @@
 #include <addrspace.h>
 #include <vm.h>
 #include <proc.h>
+#include <pagetable.h>
 
 /*
  * Note! If OPT_DUMBVM is set, as is the case until you start the VM
@@ -53,6 +54,8 @@ as_create(void)
 	/*
 	 * Initialize as needed.
 	 */
+	as->region_table= NULL;
+	as->page_table = NULL;
 
 	return as;
 }
@@ -83,27 +86,46 @@ as_destroy(struct addrspace *as)
 	/*
 	 * Clean up as needed.
 	 */
-
+	while(as->region_table != NULL){
+		as->region_table = pop_region(&as->region_table);
+	}
+	struct page_entry * head= destroy_pagetable(page_table);
+	kfree(head);
 	kfree(as);
+}
+
+struct region * pop_region(struct region **region_table){
+	struct region *temp = NULL;
+	if(*region_table == NULL){
+		kprintf("Region_table is NULL");	
+	}
+	temp = (*region_table)->next;
+
+	kfree(*region_table);
+
+	*region_table = temp;
+	return *region_table;
 }
 
 void
 as_activate(void)
 {
+	/*int i, spl;
 	struct addrspace *as;
 
 	as = proc_getas();
 	if (as == NULL) {
-		/*
-		 * Kernel thread without an address space; leave the
-		 * prior address space in place.
-		 */
 		return;
 	}
 
-	/*
-	 * Write this.
-	 */
+	**** Disable interrupts on this CPU while frobbing the TLB. ****
+	spl = splhigh();
+
+	for (i=0; i<NUM_TLB; i++) {
+		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
+	}
+
+	splx(spl);*/
 }
 
 void
@@ -137,9 +159,13 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 	(void)as;
 	(void)vaddr;
 	(void)memsize;
-	(void)readable;
+/*	(void)readable;
 	(void)writeable;
-	(void)executable;
+	(void)executable;*/
+
+	/* Put it altogether now */
+	int permissions = concat_permissions(readable,writeable,executable);
+	(void)permissions;
 	return ENOSYS;
 }
 

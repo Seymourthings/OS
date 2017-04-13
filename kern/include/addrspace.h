@@ -59,12 +59,19 @@ struct addrspace {
         paddr_t as_stackpbase;
 #else
 	/* Put stuff here for your VM system */
-	vaddr_t region_start;
-	size_t region_pages;
+	struct region *region_table;	
 	/* Region Permission */
 	struct page_entry *page_table;
 	
 #endif
+};
+
+struct region{
+	vaddr_t as_vbase;
+	paddr_t as_pbase;
+	size_t region_pages;
+	int permissions;
+	struct region *next;
 };
 
 /*
@@ -123,6 +130,8 @@ int               as_prepare_load(struct addrspace *as);
 int               as_complete_load(struct addrspace *as);
 int               as_define_stack(struct addrspace *as, vaddr_t *initstackptr);
 
+/* Helper for as_destroy */
+struct region * pop_region(struct region **region_table);
 
 /*
  * Functions in loadelf.c
