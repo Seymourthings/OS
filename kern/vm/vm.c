@@ -19,7 +19,7 @@ void vm_bootstrap()
 
 /* We need to make alloc_upages and free_upages functions */
 
-/* Allocate/free some kernel-space virtual pages
+/* Allocate/free some kernel-space virtual pages */
 paddr_t
 get_ppages(unsigned npages){
 	
@@ -34,85 +34,48 @@ get_ppages(unsigned npages){
 	}
 	for(int i=0; i<NUM_ENTRIES; i++) {
 		if(coremap[i].pg_state == PAGE_FREE && coremap[i].use_state == REUSE){
-		for( unsigned cont = 0; cont<npages; cont++){
+		unsigned cont;
+		for(cont = 0; cont<npages; cont++){
 			if(coremap[i+cont].pg_state != PAGE_FREE || coremap[i+cont].use_state != REUSE){
 			i+=cont;
 			break;
 			}
 		}
 		if(cont==npages){
-			va = coremap[i].vas;
+			pa = coremap[i].pas;
 			for(unsigned n=0; n<npages; n++){
 				if(n==0){
-				coremap[i+n].blk_state = BLOCK_PARENT;
+					coremap[i+n].blk_state = BLOCK_PARENT;
+				}
+				else{
+					coremap[i+n].blk_state = BLOCK_CHILD;
+				}
+				coremap[i+n].block_size = npages;
+				coremap[i+n].pg_state = PAGE_FIXED;
+				coremap[i+n].use_state = REUSE;
+				}
+			// Update bytes_left
+			bytes_left -= (npages*PAGE_SIZE);
+			spinlock_release(&coremap_spinlock);
+			return pa;
 			}
-			else{
-				coremap[i+n].blk_state = BLOCK_CHILD;
-			}
-			coremap[i+n].block_size = npages;
-			coremap[i+n].pg_state = PAGE_FIXED;
-			coremap[i+n].use_state = REUSE;
 		}
-		// Update bytes_left
-		bytes_left -= (npages*PAGE_SIZE);
-		spinlock_release(&coremap_spinlock);
-		return va;
-            }
-        }
-    }
+	}
+	pa = 0;
+	spinlock_release(&coremap_spinlock);
+	return pa;
 
-
-
-}*/
+}
 
 vaddr_t
 alloc_kpages(unsigned npages)
 {
- // Critical section. Protect the coremap
-    spinlock_acquire(&coremap_spinlock); 
-
-       vaddr_t va; // What we're returning
-
-    // Theres not enough free pages to allocate
-    if((int)(npages*PAGE_SIZE) > bytes_left || npages==0){
-        va = 0;
-        spinlock_release(&coremap_spinlock);
-        return va;
-    }
-
-    //loop through coremap and find n contiguous free pages
-    for(int i=0; i<NUM_ENTRIES; i++) {
-        if(coremap[i].pg_state == PAGE_FREE && coremap[i].use_state == REUSE){
-            unsigned cont = 0;
-            for(; cont<npages; cont++){
-                if(coremap[i+cont].pg_state != PAGE_FREE || coremap[i+cont].use_state != REUSE){
-                    i+=cont;
-                    break;
-                }
-            }
-            if(cont==npages){
-                va = coremap[i].vas;
-                for(unsigned n=0; n<npages; n++){
-                    if(n==0){
-                        coremap[i+n].blk_state = BLOCK_PARENT;
-                    }
-                    else{
-                        coremap[i+n].blk_state = BLOCK_CHILD;
-                    }
-                    coremap[i+n].block_size = npages;
-                    coremap[i+n].pg_state = PAGE_FIXED;
-                    coremap[i+n].use_state = REUSE;
-                }
-                // Update bytes_left
-                bytes_left -= (npages*PAGE_SIZE);
-                spinlock_release(&coremap_spinlock);
-                return va;
-            }
-        }
-    }
-    va = 0;
-    spinlock_release(&coremap_spinlock);
-    return va;
+	paddr_t pa;
+	pa = get_ppages(npages);
+	if(pa == 0){
+		return pa;
+	}
+	return PADDR_TO_KVADDR(pa);
 }
 
 void

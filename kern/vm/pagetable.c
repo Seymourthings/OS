@@ -65,10 +65,10 @@ void print_list(page_entry *page_table){
 
 void push(page_entry **page_table){
 	page_entry *new_page_entry;
-	new_page_entry = kmalloc(sizeof(page_entry));
+	new_page_entry = kmalloc(sizeof(page_entry)); //should be derefernced
 	
-	new_page_entry->vpn = 101;
-	new_page_entry->pas = 201;
+	new_page_entry->vpn = 0;
+	new_page_entry->pas = 0;
 	/*new_page_entry->metadata[PERMISSION] = NONE;
 	new_page_entry->metadata[STATE] = MEM;
 	new_page_entry->metadata[VALID_BIT] = VALID;
@@ -109,8 +109,8 @@ void remove(page_entry **page_table, vaddr_t va){
 }
 
 /* Return the permissions all in one int 
- * e.g read - 1, write - 2, exex - 3
- * return int 123
+ * e.g read - 4, write - 2, exex - 1
+ * return int 421
  */
 int concat_permissions(int read, int write, int exec){
 	int array[3];

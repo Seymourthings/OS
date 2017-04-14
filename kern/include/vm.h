@@ -55,6 +55,9 @@ int vm_fault(int faulttype, vaddr_t faultaddress);
 vaddr_t alloc_kpages(unsigned npages);
 void free_kpages(vaddr_t addr);
 
+/* Get ppages, subfunction for alloc_kpages */
+paddr_t get_ppages(unsigned npages);
+
 /* Initialize the coremap */
 void init_coremap(size_t ramsize, paddr_t firstpaddr);
 
