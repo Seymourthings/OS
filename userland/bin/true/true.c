@@ -40,5 +40,6 @@
 int
 main(void)
 {
-	exit(0);	
+	printf("Hello");
+	return 0;
 }

@@ -4,6 +4,10 @@
 #include <spinlock.h>
 #include <mainbus.h>
 #include <pagetable.h>
+#include <proc.h>
+#include <kern/errno.h>
+#include <current.h>
+#include <addrspace.h>
 
 struct coremap_entry *coremap;
 int NUM_ENTRIES;
@@ -220,10 +224,73 @@ vm_tlbshootdown(const struct tlbshootdown *ts)
 	/* Implement */
 }
 
+/* Acts as a boolean */
+bool region_check(vaddr_t faultaddress, struct region *region){
+	struct region *temp;
+	temp = region;
+	while(temp != NULL){
+		/* is the address within range */
+		if(faultaddress >= temp->as_vbase && faultaddress <= temp->as_vend){
+			return true;
+		}
+		temp = temp->next;
+	}
+	temp = NULL;
+	return false;
+}
+
+
+int valid_address(vaddr_t faultaddress, struct addrspace *as){
+	/* Checks it falls in code and text addr */
+	bool valid = false;
+	valid = region_check(faultaddress, as->region_table);
+	if(!valid){
+		/* If not in code or text check the stack */
+		valid = region_check(faultaddress, as->stack_region);
+		if(!valid){
+			/* If not in stack, check the heap */
+			valid = region_check(faultaddress, as->heap_region);
+			/* If it gets here, it's not valid*/
+			if(!valid){
+				kprintf("Address could not be found in any region");
+				return EFAULT;	
+			}
+			return 0;
+		}
+		return 0;
+	}
+	return 0;
+}
+
 int
 vm_fault(int faulttype, vaddr_t faultaddress){
 	(void)faulttype;
-	(void)faultaddress;
+	int err;
+	
+	if (curproc == NULL) {
+		/*
+		 * No process. This is probably a kernel fault early
+		 * in boot. Return EFAULT so as to panic instead of
+		 * getting into an infinite faulting loop.
+		 */
+		return EFAULT;
+	}
+
+	struct addrspace *as = proc_getas();
+	if (as == NULL) {
+		/*
+		 * No address space set up. This is probably also a
+		 * kernel fault early in boot.
+		 */
+		return EFAULT;
+	}
+
+	err = valid_address(faultaddress, as);
+	if(err){
+		return err; //check valid_addr return value
+	}
+	kprintf("It does get here");	
+	
 	return 0;
 }
 

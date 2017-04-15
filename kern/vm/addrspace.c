@@ -35,13 +35,16 @@
 #include <vm.h>
 #include <proc.h>
 #include <pagetable.h>
+#include <machine/tlb.h>
+#include <spl.h>
 
 /********* Region_table functions ********/
 
-int push_region(struct region **region_table, vaddr_t vaddr,int npages, int permissions){
+int push_region(struct region **region_table, vaddr_t vaddr, vaddr_t vaddr_end, int npages, int permissions){
 	/* Need to do a check on the head to see if NULL */
 	if(*region_table == NULL){
 		(*region_table)->as_vbase = vaddr;
+		(*region_table)->as_vend = vaddr_end;
 		(*region_table)->region_pages = npages;
 		(*region_table)->permissions = permissions;
 		return 0;
@@ -111,6 +114,7 @@ as_create(void)
 	}
 
 	as->region_table->as_vbase = 0;
+	as->region_table->as_vend = 0;
 	as->region_table->as_pbase = 0;
 	as->region_table->region_pages = 0;
 	as->region_table->permissions = 0;
@@ -125,9 +129,10 @@ as_create(void)
 		return NULL;
 	}
 
-	as->stack_region->as_vbase = 0;
+	as->stack_region->as_vbase = USERSTACK;
+	as->region_table->as_vend = USERSTACK - (5000 *PAGE_SIZE);
 	as->stack_region->as_pbase = 0;
-	as->stack_region->region_pages = 0;
+	as->stack_region->region_pages = 5000;
 	as->stack_region->permissions = 0;
 	as->stack_region->next = NULL;
 
@@ -139,6 +144,7 @@ as_create(void)
 	}
 	
 	as->heap_region->as_vbase = 0;
+	as->region_table->as_vend = 0;
 	as->heap_region->as_pbase = 0;
 	as->heap_region->region_pages = 0;
 	as->heap_region->permissions = 0;
@@ -200,7 +206,7 @@ as_destroy(struct addrspace *as)
 void
 as_activate(void)
 {
-	/*int i, spl;
+	int i, spl;
 	struct addrspace *as;
 
 	as = proc_getas();
@@ -208,14 +214,14 @@ as_activate(void)
 		return;
 	}
 
-	**** Disable interrupts on this CPU while frobbing the TLB. ****
+	/**** Disable interrupts on this CPU while frobbing the TLB. ****/
 	spl = splhigh();
 
 	for (i=0; i<NUM_TLB; i++) {
 		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
 	}
 
-	splx(spl);*/
+	splx(spl);
 }
 
 void
@@ -261,23 +267,28 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 	
 	/* Put it altogether now */
 	int permissions = concat_permissions(readable,writeable,executable);
-	if(as->region_table == NULL){
-		as->region_table = kmalloc(sizeof(struct region));
+	vaddr_t vaddr_end = vaddr + (npages*PAGE_SIZE);
+	if(as->region_table->as_vbase== 0){
 		if (as->region_table == NULL) {
 			kprintf("Region Table failed to be created");
 			return -1;
 		}
 		as->region_table->as_vbase = vaddr;
+		as->region_table->as_vend = vaddr_end;
 		as->region_table->region_pages = npages;
 		as->region_table->permissions = permissions;
 		return 0;
 
 	}else{
 		int err = 0;
-		err = push_region(&(as->region_table), vaddr, npages, permissions);
+	err = push_region(&(as->region_table), vaddr, vaddr_end, npages, permissions);
 		return err;
 	}
-	
+
+	if(as->heap_region->as_vbase < as->region_table->as_vend){
+		as->heap_region->as_vbase = as->region_table->as_vend;
+	}
+
 	return ENOSYS;
 }
 
@@ -286,7 +297,7 @@ as_prepare_load(struct addrspace *as)
 {
 	/*
 	 * Write this.
-	 */
+	 *
 	int npages = as->region_table->region_pages;
 	vaddr_t va = as->region_table->as_vbase;
 	//where the heap begins
@@ -299,7 +310,8 @@ as_prepare_load(struct addrspace *as)
 			return ENOMEM;
 		}
 		temp = temp->next;
-	}
+	}*/
+	(void)as;
 	return 0;
 }
 

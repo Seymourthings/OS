@@ -72,12 +72,18 @@ struct addrspace {
 
 struct region{
 	vaddr_t as_vbase;
+	vaddr_t as_vend;
 	paddr_t as_pbase;
 	size_t region_pages;
 	int permissions;
 	struct region *next;
 };
 
+/* Subroutine for valid_address */
+bool region_check(vaddr_t faultaddress, struct region *);
+
+/* Checks that the address is either in stack, code, text, or heap */
+int valid_address(vaddr_t faultaddress, struct addrspace *);
 /*
  * Functions in addrspace.c:
  *
@@ -139,7 +145,7 @@ int               as_define_stack(struct addrspace *as, vaddr_t *initstackptr);
 /* Helper for as_destroy */
 struct region * pop_region(struct region **);
 
-int push_region(struct region **region_table, vaddr_t vaddr, int npages, int permissions);
+int push_region(struct region **region_table, vaddr_t vaddr, vaddr_t vaddr_end,int npages, int permissions);
 
 /*
  * Functions in loadelf.c
