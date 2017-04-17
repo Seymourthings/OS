@@ -206,6 +206,14 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 }
 
 int sys_execv(char* progname, char** args, int *retval){
+	
+/*
+	unsigned int z;
+	for(z = 0; z < sizeof(arg_dest); z++){
+		arg_dest[z] = '\0';
+	}	
+*/
+	bzero(arg_dest, sizeof(arg_dest));
 	struct addrspace *as;
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
@@ -239,7 +247,6 @@ int sys_execv(char* progname, char** args, int *retval){
 		*retval = -1;
 		return EFAULT;
 	}
-	
 	arglen = 0;
 	index = 0;
 	char_buflen = 0;
