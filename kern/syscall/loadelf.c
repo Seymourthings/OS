@@ -167,6 +167,7 @@ load_elf(struct vnode *v, vaddr_t *entrypoint)
 	 */
 
 	uio_kinit(&iov, &ku, &eh, sizeof(eh), 0, UIO_READ);
+	/* eh.e_phnum is set to 3 at VOP_READ */
 	result = VOP_READ(v, &ku);
 	if (result) {
 		return result;
@@ -181,7 +182,7 @@ load_elf(struct vnode *v, vaddr_t *entrypoint)
 	/*
 	 * Check to make sure it's a 32-bit ELF-version-1 executable
 	 * for our processor type. If it's not, we can't run it.
-	 *
+	 *	
 	 * Ignore EI_OSABI and EI_ABIVERSION - properly, we should
 	 * define our own, but that would require tinkering with the
 	 * linker to have it emit our magic numbers instead of the
@@ -216,7 +217,10 @@ load_elf(struct vnode *v, vaddr_t *entrypoint)
 	 * might have a larger structure, so we must use e_phentsize
 	 * to find where the phdr starts.
 	 */
-
+	
+	/* Me - e_phnum is the number of program headers 
+	 * Seems to always be 3
+	 */
 	for (i=0; i<eh.e_phnum; i++) {
 		off_t offset = eh.e_phoff + i*eh.e_phentsize;
 		uio_kinit(&iov, &ku, &ph, sizeof(ph), offset, UIO_READ);
@@ -233,9 +237,13 @@ load_elf(struct vnode *v, vaddr_t *entrypoint)
 		}
 
 		switch (ph.p_type) {
+		    //value of 0 Prog header table entry unused
 		    case PT_NULL: /* skip */ continue;
+		    //6 entry for header table
 		    case PT_PHDR: /* skip */ continue;
+		    //0x70mil
 		    case PT_MIPS_REGINFO: /* skip */ continue;
+		    //val of 1 - loadable prog segment
 		    case PT_LOAD: break;
 		    default:
 			kprintf("loadelf: unknown segment type %d\n",
@@ -252,7 +260,7 @@ load_elf(struct vnode *v, vaddr_t *entrypoint)
 			return result;
 		}
 	}
-
+	/* According to rec slides may not need this or complete load */
 	result = as_prepare_load(as);
 	if (result) {
 		return result;
@@ -260,6 +268,10 @@ load_elf(struct vnode *v, vaddr_t *entrypoint)
 
 	/*
 	 * Now actually load each segment.
+	 */
+	
+	/* Me - what is eh.e_phnum? 
+	 * It seems to always be 3 when I run a prog 
 	 */
 
 	for (i=0; i<eh.e_phnum; i++) {
@@ -296,6 +308,7 @@ load_elf(struct vnode *v, vaddr_t *entrypoint)
 		}
 	}
 
+	/* According to rec slides may not need this or complete load */
 	result = as_complete_load(as);
 	if (result) {
 		return result;

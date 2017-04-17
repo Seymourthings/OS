@@ -53,7 +53,16 @@ int vm_fault(int faulttype, vaddr_t faultaddress);
 
 /* Allocate/free kernel heap pages (called by kmalloc/kfree) */
 vaddr_t alloc_kpages(unsigned npages);
+paddr_t alloc_upages(unsigned npages);
+
+/* Helper for free_(u/k)pages */
+void free_pages(unsigned int addr, int index);
+
 void free_kpages(vaddr_t addr);
+void free_upages(paddr_t addr);
+
+/* Get ppages, subfunction for alloc_kpages */
+paddr_t get_ppages(unsigned npages);
 
 /* Initialize the coremap */
 void init_coremap(size_t ramsize, paddr_t firstpaddr);

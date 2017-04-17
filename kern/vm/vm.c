@@ -4,6 +4,11 @@
 #include <spinlock.h>
 #include <mainbus.h>
 #include <pagetable.h>
+#include <proc.h>
+#include <kern/errno.h>
+#include <current.h>
+#include <addrspace.h>
+
 struct coremap_entry *coremap;
 int NUM_ENTRIES;
 struct spinlock coremap_spinlock = SPINLOCK_INITIALIZER;
@@ -19,92 +24,135 @@ void vm_bootstrap()
 /* We need to make alloc_upages and free_upages functions */
 
 /* Allocate/free some kernel-space virtual pages */
+paddr_t
+get_ppages(unsigned npages){
+	
+	paddr_t pa;
+	// Critical section. Protect the coremap
+	spinlock_acquire(&coremap_spinlock);
+	
+	if((int)(npages*PAGE_SIZE) > bytes_left || npages==0){
+        	pa = 0;
+		spinlock_release(&coremap_spinlock);
+        	return pa;
+	}
+	for(int i=0; i<NUM_ENTRIES; i++) {
+		if(coremap[i].pg_state == PAGE_FREE && coremap[i].use_state == REUSE){
+		unsigned cont;
+		for(cont = 0; cont<npages; cont++){
+			if(coremap[i+cont].pg_state != PAGE_FREE || coremap[i+cont].use_state != REUSE){
+			i+=cont;
+			break;
+			}
+		}
+		if(cont==npages){
+			pa = coremap[i].pas;
+			for(unsigned n=0; n<npages; n++){
+				if(n==0){
+					coremap[i+n].blk_state = BLOCK_PARENT;
+				}
+				else{
+					coremap[i+n].blk_state = BLOCK_CHILD;
+				}
+				coremap[i+n].block_size = npages;
+				coremap[i+n].pg_state = PAGE_FIXED;
+				coremap[i+n].use_state = REUSE;
+				}
+			// Update bytes_left
+			bytes_left -= (npages*PAGE_SIZE);
+			spinlock_release(&coremap_spinlock);
+			return pa;
+			}
+		}
+	}
+	pa = 0;
+	spinlock_release(&coremap_spinlock);
+	return pa;
+
+}
+
 vaddr_t
 alloc_kpages(unsigned npages)
 {
-
-	
-    // Critical section. Protect the coremap
-    spinlock_acquire(&coremap_spinlock); 
-
-    vaddr_t va; // What were returning
-    //loop through coremap and find n contiguous free pages
-
-    // Theres not enough free pages to allocate
-    if((int)(npages*PAGE_SIZE) > bytes_left || npages==0){
-        va = 0;
-        spinlock_release(&coremap_spinlock);
-        return va;
-    }
-
-    for(int i=0; i<NUM_ENTRIES; i++) {
-        if(coremap[i].pg_state == PAGE_FREE && coremap[i].use_state == REUSE){
-            unsigned cont = 0;
-            for(; cont<npages; cont++){
-                if(coremap[i+cont].pg_state != PAGE_FREE || coremap[i+cont].use_state != REUSE){
-                    i+=cont;
-                    break;
-                }
-            }
-            if(cont==npages){
-                va = coremap[i].vas;
-                for(unsigned n=0; n<npages; n++){
-                    if(n==0){
-                        coremap[i+n].blk_state = BLOCK_PARENT;
-                    }
-                    else{
-                        coremap[i+n].blk_state = BLOCK_CHILD;
-                    }
-                    coremap[i+n].block_size = npages;
-                    coremap[i+n].pg_state = PAGE_FIXED;
-                    coremap[i+n].use_state = REUSE;
-                }
-                // Update bytes_left
-                bytes_left -= (npages*PAGE_SIZE);
-                spinlock_release(&coremap_spinlock);
-                return va;
-            }
-        }
-    }
-    va = 0;
-    spinlock_release(&coremap_spinlock);
-    return va;
+	paddr_t pa;
+	pa = get_ppages(npages);
+	if(pa == 0){
+		return pa;
+	}
+	return PADDR_TO_KVADDR(pa);
 }
 
+paddr_t 
+alloc_upages(unsigned npages){
+	paddr_t pa = get_ppages(npages);
+	if(pa == 0){
+		return pa;
+	}
+	return pa;
+}
+
+void free_pages(unsigned int addr, int index){	
+	int n = coremap[index].block_size;
+	int npages = coremap[index].block_size;
+	while(n>0){
+		coremap[index].as = NULL;
+		coremap[index].block_size = 0;
+		coremap[index].pg_state = PAGE_FREE;
+		coremap[index].blk_state = BLOCK_CHILD;
+		n--;
+		index++;
+	}
+	if(n==0){
+		bytes_left += (npages*PAGE_SIZE);
+	}
+	(void)addr;
+}
 
 void
 free_kpages(vaddr_t addr)
 {
 
-    // Critical section. Protect the coremap
-    spinlock_acquire(&coremap_spinlock);
+	// Critical section. Protect the coremap
+	spinlock_acquire(&coremap_spinlock);
    
-    //NEW STUFF
-    int i = 0;
-    for(; i<NUM_ENTRIES; i++){
-        if(addr == coremap[i].vas){
-            if(coremap[i].blk_state==BLOCK_CHILD || coremap[i].use_state==NO_REUSE){
-                break; //Fail
-            }
-            int n = coremap[i].block_size;
-            int npages = coremap[i].block_size;
-            while(n>0){
-                coremap[i].as = NULL;
-                coremap[i].block_size = 0;
-                coremap[i].pg_state = PAGE_FREE;
-                coremap[i].blk_state = BLOCK_CHILD;
-                n--;
-                i++;
-            }
-            if(n==0){
-                bytes_left += (npages*PAGE_SIZE);
-            }
-        }
-    }
+	//NEW STUFF
+	int index = 0;
+	for(; index<NUM_ENTRIES; index++){
+		if(addr == coremap[index].vas){
+			if(coremap[index].blk_state == BLOCK_CHILD || 
+				coremap[index].use_state == NO_REUSE){
+        			break;
+			}
 
-    spinlock_release(&coremap_spinlock);
+			free_pages(addr,index);
+		}
+	}
+	spinlock_release(&coremap_spinlock);
 	(void)addr;
 }
+
+void
+free_upages(paddr_t addr)
+{
+
+	// Critical section. Protect the coremap
+	spinlock_acquire(&coremap_spinlock);
+   
+	//NEW STUFF
+	int index = 0;
+	for(; index<NUM_ENTRIES; index++){
+		if(addr == coremap[index].pas){
+			if(coremap[index].blk_state == BLOCK_CHILD || 
+				coremap[index].use_state == NO_REUSE){
+        			break;
+			}
+			free_pages(addr,index);
+		}
+	}
+	spinlock_release(&coremap_spinlock);
+	(void)addr;
+}
+
 
 unsigned
 int
@@ -121,10 +169,101 @@ vm_tlbshootdown(const struct tlbshootdown *ts)
 	/* Implement */
 }
 
+/* Acts as a boolean */
+bool region_check(vaddr_t faultaddress, struct region *region){
+	struct region *temp;
+	temp = region;
+	while(temp != NULL){
+		/* is the address within range */
+		if(faultaddress >= temp->as_vbase && faultaddress <= temp->as_vend){
+			return true;
+		}
+		temp = temp->next;
+	}
+	temp = NULL;
+	return false;
+}
+
+
+int valid_address(vaddr_t faultaddress, struct addrspace *as){
+	/* Checks it falls in code and text addr */
+	bool valid = false;
+	valid = region_check(faultaddress, as->region_table);
+	if(!valid){
+		/* If not in code or text check the stack */
+		valid = region_check(faultaddress, as->stack_region);
+		if(!valid){
+			/* If not in stack, check the heap */
+			valid = region_check(faultaddress, as->heap_region);
+			/* If it gets here, it's not valid*/
+			if(!valid){
+				kprintf("Address could not be found in any region");
+				return EFAULT;	
+			}
+			return 0;
+		}
+		return 0;
+	}
+	return 0;
+}
+
+
+bool vpn_check(vaddr_t vpn, struct page_entry *pt){
+	struct page_entry *temp;
+	temp = pt;
+	while(temp != NULL){
+		/* is the address within range */
+		if(temp->vpn == vpn){
+			return true;
+		}
+		temp = temp->next;
+	}
+	temp = NULL;
+	return false;
+}
+
+
 int
 vm_fault(int faulttype, vaddr_t faultaddress){
 	(void)faulttype;
-	(void)faultaddress;
+	int err;
+	bool valid = false;
+	if (curproc == NULL) {
+		/*
+		 * No process. This is probably a kernel fault early
+		 * in boot. Return EFAULT so as to panic instead of
+		 * getting into an infinite faulting loop.
+		 */
+		return EFAULT;
+	}
+
+	struct addrspace *as = proc_getas();
+	if (as == NULL) {
+		/*
+		 * No address space set up. This is probably also a
+		 * kernel fault early in boot.
+		 */
+		return EFAULT;
+	}
+
+	err = valid_address(faultaddress, as);
+	if(err){
+		return err; //check valid_addr return value
+	}
+	kprintf("It does get here");	
+	
+	//Vaild address, mask vaddr w/ PAGE_FRAME to get vpn to check for PTE inpage_table linked list.
+	vaddr_t vpn = faultaddress & PAGE_FRAME;
+	valid = vpn_check(vpn, as->page_table);
+	if(!valid){
+		err = push_pte(&(as->page_table), vpn);
+		if(err){
+			return err;
+		} 
+		//else
+		//write new pte to TLB
+			
+	}		
 	return 0;
 }
 
@@ -161,6 +300,7 @@ init_coremap(size_t ramsize, paddr_t firstpaddr){
 		coremap[i].entry_pas = entrypaddr;
 		coremap[i].as = NULL;
 		coremap[i].pas = pg_paddr;
+		//kprintf("Coremap[index].pas: %d\n", coremap[i].pas);
 		coremap[i].vas = PADDR_TO_KVADDR(pg_paddr);
 		coremap[i].block_size = 0;
 		coremap[i].pg_state = PAGE_FREE;

@@ -45,7 +45,7 @@
 
 // from arch/mips/vm/ram.c
 extern vaddr_t firstfree;
-pagetable_node * pagetable_init(void); 
+//page_entry * pagetable_init(void); 
 
 ////////////////////////////////////////////////////////////
 // km1/km2
@@ -123,14 +123,14 @@ kmalloctest(int nargs, char **args)
 	success(TEST161_SUCCESS, SECRET, "km1");
 	
 	kprintf("Starting Pagetable Init...\n");
-	pagetable_node *head = pagetable_init();
+//	page_table = pagetable_init();
 	kprintf("Printing .... \n");
-	print_list(head);
+	print_list(page_table);
 	kprintf("Removing a node...\n");
-	remove(&head,102);
-	head = destroy_pagetable(head);
-	print_list(head);
-	kfree(head);
+	remove(&page_table,102);
+	page_table = destroy_pagetable(page_table);
+	print_list(page_table);
+	kfree(page_table);
 	return 0;
 }
 
