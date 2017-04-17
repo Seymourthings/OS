@@ -82,132 +82,77 @@ alloc_kpages(unsigned npages)
 	return PADDR_TO_KVADDR(pa);
 }
 
+paddr_t 
+alloc_upages(unsigned npages){
+	paddr_t pa = get_ppages(npages);
+	if(pa == 0){
+		return pa;
+	}
+	return pa;
+}
+
+void free_pages(unsigned int addr, int index){	
+	int n = coremap[index].block_size;
+	int npages = coremap[index].block_size;
+	while(n>0){
+		coremap[index].as = NULL;
+		coremap[index].block_size = 0;
+		coremap[index].pg_state = PAGE_FREE;
+		coremap[index].blk_state = BLOCK_CHILD;
+		n--;
+		index++;
+	}
+	if(n==0){
+		bytes_left += (npages*PAGE_SIZE);
+	}
+	(void)addr;
+}
+
 void
 free_kpages(vaddr_t addr)
 {
 
-    // Critical section. Protect the coremap
-    spinlock_acquire(&coremap_spinlock);
+	// Critical section. Protect the coremap
+	spinlock_acquire(&coremap_spinlock);
    
-    //NEW STUFF
-    int i = 0;
-    for(; i<NUM_ENTRIES; i++){
-        if(addr == coremap[i].vas){
-            if(coremap[i].blk_state==BLOCK_CHILD || coremap[i].use_state==NO_REUSE){
-                break; //Fail
-            }
-            int n = coremap[i].block_size;
-            int npages = coremap[i].block_size;
-            while(n>0){
-                coremap[i].as = NULL;
-                coremap[i].block_size = 0;
-                coremap[i].pg_state = PAGE_FREE;
-                coremap[i].blk_state = BLOCK_CHILD;
-                n--;
-                i++;
-            }
-            if(n==0){
-                bytes_left += (npages*PAGE_SIZE);
-            }
-        }
-    }
+	//NEW STUFF
+	int index = 0;
+	for(; index<NUM_ENTRIES; index++){
+		if(addr == coremap[index].vas){
+			if(coremap[index].blk_state == BLOCK_CHILD || 
+				coremap[index].use_state == NO_REUSE){
+        			break;
+			}
 
-    spinlock_release(&coremap_spinlock);
-	(void)addr;
-}
-
-/* I believe these will access the page table instead of the coremap
-vaddr_t
-alloc_upages(unsigned npages)
-{
-
-    vaddr_t va; // What we're returning
-
-    // Theres not enough free pages to allocate
-    if((int)(npages*PAGE_SIZE) > bytes_left || npages==0){
-        va = 0;
-        return va;
-    }
-	
-	//loop through page_table and find free pages 
-	struct pagetable_node *iterator;
-	iterator = head;
-	while(iterator != NULL){
-		if(iterator->page_entry.state == MEM){
-			// a little lost here
-			va = iterator->page_entry->vpn + pas (offset)? 
+			free_pages(addr,index);
 		}
 	}
-
-	for(int i=0; i<NUM_ENTRIES; i++) {
-        if(coremap[i].pg_state == PAGE_FREE && coremap[i].use_state == REUSE){
-            unsigned cont = 0;
-            for(; cont<npages; cont++){
-                if(coremap[i+cont].pg_state != PAGE_FREE || coremap[i+cont].use_state != REUSE){
-                    i+=cont;
-                    break;
-                }
-            }
-            if(cont==npages){
-                va = coremap[i].vas;
-                for(unsigned n=0; n<npages; n++){
-                    if(n==0){
-                        coremap[i+n].blk_state = BLOCK_PARENT;
-                    }
-                    else{
-                        coremap[i+n].blk_state = BLOCK_CHILD;
-                    }
-                    coremap[i+n].block_size = npages;
-                    coremap[i+n].pg_state = PAGE_FIXED;
-                    coremap[i+n].use_state = REUSE;
-                }
-                // Update bytes_left
-                bytes_left -= (npages*PAGE_SIZE);
-                spinlock_release(&coremap_spinlock);
-                return va;
-            }
-        }
-    }
-    va = 0;
-    spinlock_release(&coremap_spinlock);
-    return va;
-}*/
-
-/*
-void
-free_upages(vaddr_t addr)
-{
-
-    // Critical section. Protect the coremap
-    spinlock_acquire(&coremap_spinlock);
-   
-    //NEW STUFF
-    int i = 0;
-    for(; i<NUM_ENTRIES; i++){
-        if(addr == coremap[i].vas){
-            if(coremap[i].blk_state==BLOCK_CHILD || coremap[i].use_state==NO_REUSE){
-                break; //Fail
-            }
-            int n = coremap[i].block_size;
-            int npages = coremap[i].block_size;
-            while(n>0){
-                coremap[i].as = NULL;
-                coremap[i].block_size = 0;
-                coremap[i].pg_state = PAGE_FREE;
-                coremap[i].blk_state = BLOCK_CHILD;
-                n--;
-                i++;
-            }
-            if(n==0){
-                bytes_left += (npages*PAGE_SIZE);
-            }
-        }
-    }
-
-    spinlock_release(&coremap_spinlock);
+	spinlock_release(&coremap_spinlock);
 	(void)addr;
 }
-*/
+
+void
+free_upages(paddr_t addr)
+{
+
+	// Critical section. Protect the coremap
+	spinlock_acquire(&coremap_spinlock);
+   
+	//NEW STUFF
+	int index = 0;
+	for(; index<NUM_ENTRIES; index++){
+		if(addr == coremap[index].pas){
+			if(coremap[index].blk_state == BLOCK_CHILD || 
+				coremap[index].use_state == NO_REUSE){
+        			break;
+			}
+			free_pages(addr,index);
+		}
+	}
+	spinlock_release(&coremap_spinlock);
+	(void)addr;
+}
+
 
 unsigned
 int
