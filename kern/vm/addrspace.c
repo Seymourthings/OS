@@ -42,33 +42,23 @@
 
 int push_region(struct region **region_table, vaddr_t vaddr, vaddr_t vaddr_end, int npages, int permissions){
 	/* Need to do a check on the head to see if NULL */
-	if(*region_table == NULL){
-		(*region_table)->as_vbase = vaddr;
-		(*region_table)->as_vend = vaddr_end;
-		(*region_table)->region_pages = npages;
-		(*region_table)->permissions = permissions;
-		return 0;
+	struct region *new_region;
+	new_region = kmalloc(sizeof(*new_region));
 
-	} else {
-		struct region *new_region;
-		new_region = kmalloc(sizeof(*new_region));
-
-		if(new_region == NULL){
-			kprintf("No mem for new region");
-			return ENOSYS;
-		}
-	
-		new_region->as_vbase = vaddr;
-		new_region->as_vend = vaddr_end;
-		new_region->region_pages = npages;
-		new_region->permissions = permissions;
-		
-		new_region->next = *region_table;
-		*region_table = new_region;
-		return 0;
+	if(new_region == NULL){
+		kprintf("No mem for new region");
+		return ENOSYS;
 	}
-	kprintf("something went wrong with the push");
-	return -1;
+	
+	new_region->as_vbase = vaddr;
+	new_region->as_vend = vaddr_end;
+	new_region->region_pages = npages;
+	new_region->permissions = permissions;
+		
+	new_region->next = *region_table;
+	*region_table = new_region;
+
+	return 0;
 }
 
 struct region * pop_region(struct region **region_table){
@@ -262,7 +252,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 	
 	/* Align the region. First, the base... */
 	memsize += vaddr & ~(vaddr_t)PAGE_FRAME;
-/*	vaddr &= PAGE_FRAME;*/
+	vaddr &= PAGE_FRAME;
 
 	/* ...and now the length. */
 	memsize = (memsize + PAGE_SIZE - 1) & PAGE_FRAME;
@@ -273,10 +263,6 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 	int permissions = concat_permissions(readable,writeable,executable);
 	vaddr_t vaddr_end = vaddr + (npages*PAGE_SIZE);
 	if(as->region_table->as_vbase== 0){
-		if (as->region_table == NULL) {
-			kprintf("Region Table failed to be created");
-			return -1;
-		}
 		as->region_table->as_vbase = vaddr;
 		as->region_table->as_vend = vaddr_end;
 		as->region_table->region_pages = npages;

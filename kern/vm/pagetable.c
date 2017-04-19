@@ -65,29 +65,25 @@ void print_list(page_entry *page_table){
 
 int push_pte(struct page_entry **pt, vaddr_t vpn){
 	/* Need to do a check on the head to see if NULL */
-	if(*pt == NULL){
-		(*pt)->vpn = vpn;
-		(*pt)->pas = alloc_upages(1);
-		return 0;
+	struct page_entry *new_pte;
+	new_pte = kmalloc(sizeof(*new_pte));
 
-	} else {
-		struct page_entry *new_pte;
-		new_pte = kmalloc(sizeof(*new_pte));
-
-		if(new_pte == NULL){
-			kprintf("No mem for new pte");
-			return -1;
-		}
-	
-		new_pte->vpn = vpn;
-		new_pte->pas = alloc_upages(1);
-		
-		new_pte->next = *pt;
-		*pt = new_pte;
-		return 0;
+	if(new_pte == NULL){
+		kprintf("No mem for new pte");
+		return -1;
 	}
-	kprintf("something went wrong with the push");
-	return -1;
+	
+	new_pte->vpn = vpn;
+	new_pte->pas = alloc_upages(1);
+	if(new_pte->pas == 0){
+		kprintf("Paddr is 0");
+		return -1;
+	}
+		
+	new_pte->next = *pt;
+	*pt = new_pte;
+	
+	return 0;
 }
 
 page_entry * find_vaddr(page_entry *page_table, vaddr_t va){

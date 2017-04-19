@@ -78,18 +78,12 @@ alloc_kpages(unsigned npages)
 {
 	paddr_t pa;
 	pa = get_ppages(npages);
-	if(pa == 0){
-		return pa;
-	}
 	return PADDR_TO_KVADDR(pa);
 }
 
 paddr_t 
 alloc_upages(unsigned npages){
-	paddr_t pa = get_ppages(npages);
-	if(pa == 0){
-		return pa;
-	}
+	paddr_t pa = get_ppages(npages);	
 	return pa;
 }
 
@@ -210,18 +204,18 @@ int valid_address(vaddr_t faultaddress, struct addrspace *as){
 }
 
 
-bool vpn_check(vaddr_t vpn, struct page_entry *pt){
+struct page_entry * vpn_check(vaddr_t vpn, struct page_entry *pt){
 	struct page_entry *temp;
 	temp = pt;
 	while(temp != NULL){
 		/* is the address within range */
 		if(temp->vpn == vpn){
-			return true;
+			return temp;
 		}
 		temp = temp->next;
 	}
 	temp = NULL;
-	return false;
+	return temp;
 }
 
 
@@ -229,7 +223,7 @@ int
 vm_fault(int faulttype, vaddr_t faultaddress){
 	(void)faulttype;
 	int err;
-	bool valid = false;
+	
 	if (curproc == NULL) {
 		/*
 		 * No process. This is probably a kernel fault early
@@ -255,9 +249,11 @@ vm_fault(int faulttype, vaddr_t faultaddress){
 	//kprintf("It does get here");	
 	
 	//Vaild address, mask vaddr w/ PAGE_FRAME to get vpn to check for PTE inpage_table linked list.
+	
 	vaddr_t vpn = faultaddress & PAGE_FRAME;
-	valid = vpn_check(vpn, as->page_table);
-	if(!valid){
+	struct page_entry *pg_entry;
+	pg_entry = vpn_check(vpn, as->page_table);
+	if(pg_entry == NULL){
 		err = push_pte(&(as->page_table), vpn);
 		if(err){
 			return err;
@@ -270,15 +266,24 @@ vm_fault(int faulttype, vaddr_t faultaddress){
         /* Disable interrupts on this CPU while frobbing the TLB. */
 
 	uint32_t ehi, elo;
-	int spl, tlb_return;
+	int spl/*, tlb_return*/;
+	paddr_t tlb_pas;
 
         spl = splhigh();
-	ehi = faultaddress&PAGE_FRAME;
-	elo = as->page_table->pas | TLBLO_DIRTY | TLBLO_VALID;
-	tlb_return = tlb_probe(ehi,elo);
-	if(tlb_return < 0){
-		tlb_random(ehi, elo);
+	faultaddress &= PAGE_FRAME;
+	ehi = faultaddress;
+	if(pg_entry == NULL){
+		tlb_pas = as->page_table->pas; //what was pushed on	
+	} else{
+		tlb_pas = pg_entry->pas; //vpn check returned a page_entry
 	}
+	elo = tlb_pas | TLBLO_DIRTY | TLBLO_VALID;
+/*	tlb_return = tlb_probe(ehi,elo);
+	if(tlb_return < 0){
+		kprintf("ELO : %d",elo);
+	}*/
+	tlb_random(ehi, elo);
+	
 
 	DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress,as->page_table->pas);
 

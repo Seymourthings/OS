@@ -47,7 +47,7 @@ void print_list(page_entry *head);
 
 /* Add To Beginning of Linked List */
 int push_pte(page_entry **head, vaddr_t vpn);
-bool vpn_check(vaddr_t vpn, page_entry *pt);
+struct page_entry * vpn_check(vaddr_t vpn, page_entry *pt);
 
 page_entry * find_vaddr(page_entry *, vaddr_t va);
 
