@@ -8,6 +8,8 @@
 #include <kern/errno.h>
 #include <current.h>
 #include <addrspace.h>
+#include <mips/tlb.h>
+#include <spl.h>
 
 struct coremap_entry *coremap;
 int NUM_ENTRIES;
@@ -197,7 +199,7 @@ int valid_address(vaddr_t faultaddress, struct addrspace *as){
 			valid = region_check(faultaddress, as->heap_region);
 			/* If it gets here, it's not valid*/
 			if(!valid){
-				kprintf("Address could not be found in any region");
+				//kprintf("Address could not be found in any region");
 				return EFAULT;	
 			}
 			return 0;
@@ -250,7 +252,7 @@ vm_fault(int faulttype, vaddr_t faultaddress){
 	if(err){
 		return err; //check valid_addr return value
 	}
-	kprintf("It does get here");	
+	//kprintf("It does get here");	
 	
 	//Vaild address, mask vaddr w/ PAGE_FRAME to get vpn to check for PTE inpage_table linked list.
 	vaddr_t vpn = faultaddress & PAGE_FRAME;
@@ -263,7 +265,25 @@ vm_fault(int faulttype, vaddr_t faultaddress){
 		//else
 		//write new pte to TLB
 			
-	}		
+	}
+	
+        /* Disable interrupts on this CPU while frobbing the TLB. */
+
+	uint32_t ehi, elo;
+	int spl, tlb_return;
+
+        spl = splhigh();
+	ehi = faultaddress&PAGE_FRAME;
+	elo = as->page_table->pas | TLBLO_DIRTY | TLBLO_VALID;
+	tlb_return = tlb_probe(ehi,elo);
+	if(tlb_return < 0){
+		tlb_random(ehi, elo);
+	}
+
+	DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress,as->page_table->pas);
+
+        splx(spl);
+		
 	return 0;
 }
 

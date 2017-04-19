@@ -29,11 +29,6 @@
 #define	VALID_BIT	'2'
 #define REFERENCED	'3'
 	
-/* Page Table (Linked List) 
- * Head of the table
- */
-extern struct page_entry *page_table;
-
 typedef struct page_entry{
 	vaddr_t vpn; 	//top 20 bits
 	paddr_t pas; 	//physical page location on disk

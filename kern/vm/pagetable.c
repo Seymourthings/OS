@@ -63,24 +63,6 @@ void print_list(page_entry *page_table){
 	}
 }
 
-/*
-void push(page_entry **page_table, vaddr_t vpn){
-	page_entry *new_page_entry;
-	new_page_entry = kmalloc(sizeof(page_entry)); //should be derefernced
-	
-	new_page_entry->vpn = vpn;
-	new_page_entry->pas = 0;
-	*new_page_entry->metadata[PERMISSION] = NONE;
-	new_page_entry->metadata[STATE] = MEM;
-	new_page_entry->metadata[VALID_BIT] = VALID;
-	new_page_entry->metadata[REFERENCED] = NO_RECENT_WR;
-
-	
-	new_page_entry->next = *page_table;
-	*page_table = new_page_entry;
-}
-
-*/
 int push_pte(struct page_entry **pt, vaddr_t vpn){
 	/* Need to do a check on the head to see if NULL */
 	if(*pt == NULL){

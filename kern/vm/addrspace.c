@@ -59,6 +59,7 @@ int push_region(struct region **region_table, vaddr_t vaddr, vaddr_t vaddr_end, 
 		}
 	
 		new_region->as_vbase = vaddr;
+		new_region->as_vend = vaddr_end;
 		new_region->region_pages = npages;
 		new_region->permissions = permissions;
 		
@@ -201,7 +202,7 @@ as_destroy(struct addrspace *as)
 		as->heap_region = pop_region(&as->heap_region);
 	}
 
-	struct page_entry * head = destroy_pagetable(page_table);
+	struct page_entry * head = destroy_pagetable(as->page_table);
 	kfree(head);
 	kfree(as);
 }
@@ -261,7 +262,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 	
 	/* Align the region. First, the base... */
 	memsize += vaddr & ~(vaddr_t)PAGE_FRAME;
-	vaddr &= PAGE_FRAME;
+/*	vaddr &= PAGE_FRAME;*/
 
 	/* ...and now the length. */
 	memsize = (memsize + PAGE_SIZE - 1) & PAGE_FRAME;
@@ -280,8 +281,6 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 		as->region_table->as_vend = vaddr_end;
 		as->region_table->region_pages = npages;
 		as->region_table->permissions = permissions;
-		return 0;
-
 	}else{
 		int err = 0;
 	err = push_region(&(as->region_table), vaddr, vaddr_end, npages, permissions);
@@ -292,6 +291,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 		as->heap_region->as_vbase = as->region_table->as_vend;
 		//heap end is same as heap start at first.
 		as->heap_region->as_vend = as->region_table->as_vend;
+		return 0;
 	}
 
 	return ENOSYS;
@@ -338,7 +338,7 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 	 * Write this.
 	 */
 	
-	KASSERT(as->stack_region->as_pbase != 0);
+/*	KASSERT(as->stack_region->as_pbase != 0);*/
 
 	(void)as;
 
