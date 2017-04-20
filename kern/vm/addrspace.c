@@ -118,10 +118,10 @@ as_create(void)
 		return NULL;
 	}
 
-	as->stack_region->as_vbase = USERSTACK;
-	as->stack_region->as_vend = USERSTACK - (5000 *PAGE_SIZE);
+	as->stack_region->as_vbase = USERSTACK- (1024 *PAGE_SIZE);
+	as->stack_region->as_vend = USERSTACK;	
 	as->stack_region->as_pbase = 0;
-	as->stack_region->region_pages = 5000;
+	as->stack_region->region_pages = 1024;
 	as->stack_region->next = NULL;
 
 	

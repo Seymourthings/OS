@@ -62,10 +62,10 @@ struct addrspace {
 	/* Put stuff here for your VM system */
 	
 	/* Region Permission */
-	struct page_entry *page_table;
 	struct region *region_table;	//for code & text	
 	struct region *stack_region;	//stack
 	struct region *heap_region;	//heap
+	struct page_entry *page_table;
 	
 #endif
 };

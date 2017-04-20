@@ -171,7 +171,7 @@ bool region_check(vaddr_t faultaddress, struct region *region){
 	temp = region;
 	while(temp != NULL){
 		/* is the address within range */
-		if(faultaddress >= temp->as_vbase && faultaddress <= temp->as_vend){
+		if(faultaddress >= temp->as_vbase && faultaddress < temp->as_vend){
 			return true;
 		}
 		temp = temp->next;
@@ -241,9 +241,8 @@ vm_fault(int faulttype, vaddr_t faultaddress){
 		 */
 		return EFAULT;
 	}
-	uint32_t fault = PAGE_FRAME;
-	kprintf("The pageframe = %04x \n", fault);
-	kprintf("The faultaddress = %04x \n", faultaddress);
+	//uint32_t fault = PAGE_FRAME;
+	//kprintf("The pageframe = %04x \n", fault);
 
 	err = valid_address(faultaddress, as);
 	if(err){
@@ -254,6 +253,8 @@ vm_fault(int faulttype, vaddr_t faultaddress){
 	//Vaild address, mask vaddr w/ PAGE_FRAME to get vpn to check for PTE inpage_table linked list.
 	
 	vaddr_t vpn = faultaddress & PAGE_FRAME;
+	
+	//kprintf("VPN = %04x \n", vpn);
 	struct page_entry *pg_entry;
 	pg_entry = vpn_check(vpn, as->page_table);
 	if(pg_entry == NULL){

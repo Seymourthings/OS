@@ -1,37 +1,7 @@
 #include <pagetable.h>
 #include <types.h>
 #include <lib.h>
-page_entry *page_table;
-/*
-page_entry * pagetable_init(void){
-	int index;
 
-	page_table = NULL;
-
-	initialize page_table node fields 
-	page_table = kmalloc(sizeof(page_entry));
-	page_table->vpn = 0;
-	page_table->pas = 0;
-	page_table->permissions = 000;
-	page_table->metadata[PERMISSION] = NONE;
-	page_table->metadata[STATE] = MEM;
-	page_table->metadata[VALID_BIT] = VALID;
-	page_table->metadata[REFERENCED] = NO_RECENT_WR;
-	page_table->next = NULL;
-
-	* Per TA - only need around 18 pages per process
-	 * Don't want to give each process access to all 256 entires
-	 * Allocate space for 18 page entries and add them to list
-	 /
-	
-	index = 0;
-	while(index < 17){
-		push(&page_table);
-		index++;
-	}
-	return page_table;
-}
-*/
 page_entry *destroy_pagetable(page_entry *page_table){
 	while(page_table != NULL){
 		page_table = pop(&page_table);
@@ -65,6 +35,12 @@ void print_list(page_entry *page_table){
 
 int push_pte(struct page_entry **pt, vaddr_t vpn){
 	/* Need to do a check on the head to see if NULL */
+/*	if((*pt)->vpn == 0){
+		(*pt)->vpn = vpn;
+		(*pt)->pas = alloc_upages(1);
+		return 0;	
+	}*/
+
 	struct page_entry *new_pte;
 	new_pte = kmalloc(sizeof(*new_pte));
 
