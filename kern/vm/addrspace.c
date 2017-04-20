@@ -40,7 +40,7 @@
 
 /********* Region_table functions ********/
 
-int push_region(struct region **region_table, vaddr_t vaddr, vaddr_t vaddr_end, int npages, int permissions){
+int push_region(struct region **region_table, vaddr_t vaddr, vaddr_t vaddr_end, int npages){
 	/* Need to do a check on the head to see if NULL */
 	struct region *new_region;
 	new_region = kmalloc(sizeof(*new_region));
@@ -53,7 +53,6 @@ int push_region(struct region **region_table, vaddr_t vaddr, vaddr_t vaddr_end, 
 	new_region->as_vbase = vaddr;
 	new_region->as_vend = vaddr_end;
 	new_region->region_pages = npages;
-	new_region->permissions = permissions;
 		
 	new_region->next = *region_table;
 	*region_table = new_region;
@@ -108,7 +107,6 @@ as_create(void)
 	as->region_table->as_vend = 0;
 	as->region_table->as_pbase = 0;
 	as->region_table->region_pages = 0;
-	as->region_table->permissions = 0;
 	as->region_table->next = NULL;
 	
 	/* Should we allocate space for stack & heap in here?
@@ -121,10 +119,9 @@ as_create(void)
 	}
 
 	as->stack_region->as_vbase = USERSTACK;
-	as->region_table->as_vend = USERSTACK - (5000 *PAGE_SIZE);
+	as->stack_region->as_vend = USERSTACK - (5000 *PAGE_SIZE);
 	as->stack_region->as_pbase = 0;
 	as->stack_region->region_pages = 5000;
-	as->stack_region->permissions = 0;
 	as->stack_region->next = NULL;
 
 	
@@ -135,10 +132,9 @@ as_create(void)
 	}
 	
 	as->heap_region->as_vbase = 0;
-	as->region_table->as_vend = 0;
+	as->heap_region->as_vend = 0;
 	as->heap_region->as_pbase = 0;
 	as->heap_region->region_pages = 0;
-	as->heap_region->permissions = 0;
 	as->heap_region->next = NULL;
 
 	/* Prob in vm_fault*/
@@ -149,7 +145,6 @@ as_create(void)
 	
 	as->page_table->vpn = 0;	
 	as->page_table->pas = 0;	
-	as->page_table->permissions = 000;	
 	as->page_table->next = NULL;	
 
 	return as;
@@ -252,7 +247,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 	
 	/* Align the region. First, the base... */
 	memsize += vaddr & ~(vaddr_t)PAGE_FRAME;
-	vaddr &= PAGE_FRAME;
+/*	vaddr &= PAGE_FRAME;*/
 
 	/* ...and now the length. */
 	memsize = (memsize + PAGE_SIZE - 1) & PAGE_FRAME;
@@ -261,16 +256,19 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 	
 	/* Put it altogether now */
 	int permissions = concat_permissions(readable,writeable,executable);
+	(void)permissions;
+	
 	vaddr_t vaddr_end = vaddr + (npages*PAGE_SIZE);
 	if(as->region_table->as_vbase== 0){
 		as->region_table->as_vbase = vaddr;
 		as->region_table->as_vend = vaddr_end;
 		as->region_table->region_pages = npages;
-		as->region_table->permissions = permissions;
 	}else{
 		int err = 0;
-	err = push_region(&(as->region_table), vaddr, vaddr_end, npages, permissions);
-		return err;
+	err = push_region(&(as->region_table), vaddr, vaddr_end, npages);
+		if(err){
+			return err;
+		}
 	}
 
 	if(as->heap_region->as_vbase < as->region_table->as_vend){

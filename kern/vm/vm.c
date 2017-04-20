@@ -241,6 +241,9 @@ vm_fault(int faulttype, vaddr_t faultaddress){
 		 */
 		return EFAULT;
 	}
+	uint32_t fault = PAGE_FRAME;
+	kprintf("The pageframe = %04x \n", fault);
+	kprintf("The faultaddress = %04x \n", faultaddress);
 
 	err = valid_address(faultaddress, as);
 	if(err){

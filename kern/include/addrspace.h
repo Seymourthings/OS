@@ -75,7 +75,6 @@ struct region{
 	vaddr_t as_vend;
 	paddr_t as_pbase;
 	size_t region_pages;
-	int permissions;
 	struct region *next;
 };
 
@@ -145,7 +144,7 @@ int               as_define_stack(struct addrspace *as, vaddr_t *initstackptr);
 /* Helper for as_destroy */
 struct region * pop_region(struct region **);
 
-int push_region(struct region **region_table, vaddr_t vaddr, vaddr_t vaddr_end,int npages, int permissions);
+int push_region(struct region **region_table, vaddr_t vaddr, vaddr_t vaddr_end,int npages);
 
 /*
  * Functions in loadelf.c

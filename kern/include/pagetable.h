@@ -32,9 +32,6 @@
 typedef struct page_entry{
 	vaddr_t vpn; 	//top 20 bits
 	paddr_t pas; 	//physical page location on disk
-	
-	/*Order goes Permission, State, Valid, Referenced */
-	int permissions;
 	struct page_entry *next;
 
 }page_entry;
