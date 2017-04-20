@@ -217,7 +217,7 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 			return err;
 		}
 		newpas2vas = PADDR_TO_KVADDR(newas->page_table->pas);
-		memcpy((void*)newpas2vas, (void*)oldpas2vas, sizeof(oldpas2vas));
+		memcpy((void*)newpas2vas, (const void*)oldpas2vas,PAGE_SIZE);
 		temp_pte = temp_pte->next;
 	
 	}
