@@ -207,13 +207,17 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 
 	
 	//Copy page_table
+	vaddr_t oldpas2vas;
+	vaddr_t newpas2vas;
 	temp_pte = old->page_table;	
+	oldpas2vas = PADDR_TO_KVADDR(temp_pte->pas);
 	while(temp_pte != NULL){
 		err = push_pte(&(newas->page_table),temp_pte->vpn);
 		if(err){
 			return err;
 		}
-		newas->page_table->pas = temp_pte->pas;
+		newpas2vas = PADDR_TO_KVADDR(newas->page_table->pas);
+		memcpy((void*)newpas2vas, (void*)oldpas2vas, sizeof(oldpas2vas));
 		temp_pte = temp_pte->next;
 	
 	}
