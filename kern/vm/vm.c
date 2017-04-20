@@ -78,6 +78,9 @@ alloc_kpages(unsigned npages)
 {
 	paddr_t pa;
 	pa = get_ppages(npages);
+	if(pa== 0){
+		return pa;
+	}
 	return PADDR_TO_KVADDR(pa);
 }
 
