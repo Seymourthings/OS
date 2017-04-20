@@ -154,19 +154,71 @@ int
 as_copy(struct addrspace *old, struct addrspace **ret)
 {
 	struct addrspace *newas;
+	struct region *temp;
+	struct page_entry *temp_pte;
 
+	int err = 0;
 	newas = as_create();
 	if (newas==NULL) {
 		return ENOMEM;
 	}
 
 	/*
-	 * Write this.
+	 *  Start copying old addrspace into newas addrspace.
 	 */
 
-	(void)old;
+	//Copy region_table
+	temp = old->region_table;
+	while(temp != NULL){
+		err = push_region(&(newas->region_table),temp->as_vbase,temp->as_vend,temp->region_pages);
+		if(err){
+			return err;
+		}
 
+	
+		temp = temp->next;
+	}
+	
+	//Copy heap region
+	temp = old->heap_region;
+	while(temp != NULL){
+		err = push_region(&(newas->heap_region),temp->as_vbase,temp->as_vend,temp->region_pages);
+		if(err){
+			return err;
+		}
+
+		
+		temp = temp->next;
+	
+	}
+
+	//Copy stack region
+	temp = old->stack_region;
+	while(temp != NULL){
+		err = push_region(&(newas->stack_region),temp->as_vbase,temp->as_vend,temp->region_pages);
+		if(err){
+			return err;
+		}
+
+		
+		temp = temp->next;
+	
+	}
+
+	
+	//Copy page_table
+	temp_pte = old->page_table;	
+	while(temp_pte != NULL){
+		err = push_pte(&(newas->page_table),temp_pte->vpn);
+		if(err){
+			return err;
+		}
+		newas->page_table->pas = temp_pte->pas;
+		temp_pte = temp_pte->next;
+	
+	}
 	*ret = newas;
+	
 	return 0;
 }
 
