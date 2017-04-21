@@ -168,13 +168,17 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	}else{
 		lock_acquire(curproc->lock);
 		proc = get_proc(pid);
+		if(proc == NULL){
+			*retval = -1;
+			return ESRCH;
+		}	
+		if(proc->exited){
+			proc_destroy(proc);
+		}
 		lock_release(curproc->lock);
 	}
 	
-	if(proc == NULL){
-		*retval = -1;
-		return ESRCH;
-	}		
+	
 	
 	if(pid == curproc->pid){
 		*retval = -1;
@@ -201,8 +205,8 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	}
 	
 	*retval = pid;
-	proc_destroy(proc);
-//	kfree(proc);	
+//	proc_destroy(proc);
+	//kfree(proc);	
 	return 0;
 }
 
