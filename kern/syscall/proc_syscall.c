@@ -53,6 +53,7 @@ void sys_exit(int exitcode){
 	
 	/* Increment sem count - main/menu.c */	
 	V(g_sem);
+//	proc_destroy(curproc);
 	thread_exit();
 }
 
@@ -200,7 +201,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	}
 	
 	*retval = pid;
-
+	proc_destroy(proc);
 //	kfree(proc);	
 	return 0;
 }
