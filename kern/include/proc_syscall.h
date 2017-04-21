@@ -15,3 +15,4 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval); //trapframe
 pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval);
 int sys_execv(char* progname, char** args, int *retval);
 char * concat_null(char * str, size_t buflen);
+int sys_sbrk(intptr_t amount, int *retval);
