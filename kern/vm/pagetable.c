@@ -43,6 +43,7 @@ int push_pte(struct page_entry **pt, vaddr_t vpn){
 
 	struct page_entry *new_pte;
 	new_pte = kmalloc(sizeof(*new_pte));
+	bzero(new_pte, sizeof(*new_pte));
 
 	if(new_pte == NULL){
 		kprintf("No mem for new pte");

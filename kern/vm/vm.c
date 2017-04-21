@@ -91,6 +91,7 @@ alloc_upages(unsigned npages){
 }
 
 void free_pages(unsigned int addr, int index){	
+//	spinlock_acquire(&coremap_spinlock);
 	int n = coremap[index].block_size;
 	int npages = coremap[index].block_size;
 	while(n>0){
@@ -104,6 +105,7 @@ void free_pages(unsigned int addr, int index){
 	if(n==0){
 		bytes_left += (npages*PAGE_SIZE);
 	}
+//	spinlock_release(&coremap_spinlock);
 	(void)addr;
 }
 
@@ -246,7 +248,7 @@ vm_fault(int faulttype, vaddr_t faultaddress){
 	}
 	//uint32_t fault = PAGE_FRAME;
 	//kprintf("The pageframe = %04x \n", fault);
-
+	
 	err = valid_address(faultaddress, as);
 	if(err){
 		return err; //check valid_addr return value

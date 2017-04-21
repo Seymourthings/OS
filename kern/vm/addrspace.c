@@ -143,6 +143,7 @@ as_create(void)
 		return NULL;
 	}
 	
+	bzero(as->page_table,(sizeof(struct page_entry)));
 	as->page_table->vpn = 0;	
 	as->page_table->pas = 0;	
 	as->page_table->next = NULL;	
