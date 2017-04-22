@@ -13,6 +13,8 @@
 #include <kern/fcntl.h>
 #include <vfs.h>
 #include <syscall.h>
+#include <pagetable.h>
+#include <vm.h>
 int pid_stack[PID_MAX/2];
 int stack_index;
 pid_t g_pid;
@@ -451,4 +453,87 @@ char * concat_null(char * str, size_t buflen){
 	
 	char *rtrn = temp;
 	return rtrn;
+}
+
+int sys_sbrk(intptr_t amount, int *retval){
+	/*"break" is the end of heap region, retval set to old "break"*/
+
+	//pointer to current addrspace
+	struct addrspace *as = curproc->p_addrspace;
+	
+	//bounds of current heap region
+	vaddr_t heap_s = as->heap_region->as_vbase;
+	vaddr_t heap_e = as->heap_region->as_vend;
+	vaddr_t new_heap_e = 0;
+
+	//check if amount is page_aligned
+	if(amount % PAGE_SIZE){
+		*retval = -1;
+		return EINVAL;
+	}	 
+
+	//check if amount will move heap_e below heap_s
+	if((amount + heap_e) < heap_s){
+		*retval = -1;
+		return EINVAL;
+	}
+
+	//check if amount will move heap_e into stack region
+	vaddr_t stack_s = as->stack_region->as_vbase;
+	
+	if((amount + heap_e) > stack_s){
+		*retval = -1;
+		return ENOMEM;
+	}
+
+	int i = 0;
+	int npages = 0;
+	vaddr_t vpn = 0;
+//	paddr_t pas = 0;
+	struct page_entry * pg_entry;
+	new_heap_e = heap_e;
+	//negative amount
+	if(amount < 0){
+		//amount changed to postive to get postive number of pages.
+		amount *= -1;
+		npages = amount / PAGE_SIZE;
+
+		for(i = 0 ; i < npages; i++){
+					
+			new_heap_e -= PAGE_SIZE;
+			vpn = new_heap_e & PAGE_FRAME;
+			pg_entry = vpn_check(vpn, as->page_table);
+			free_upages(pg_entry->pas);
+
+		}
+		
+		*retval = heap_e;
+		curproc->p_addrspace->heap_region->as_vend -= amount;
+		
+	
+	}
+	
+	//positive amount
+	
+	else{
+
+	        int err = 0;
+		npages = amount / PAGE_SIZE;
+		
+		for(i = 0 ; i < npages; i++){
+					
+			new_heap_e += PAGE_SIZE;
+			vpn = new_heap_e & PAGE_FRAME;
+			err = push_pte(&(as->page_table),vpn);
+			if(err){
+				return err;
+			}
+			bzero((void*)PADDR_TO_KVADDR(as->page_table->pas), PAGE_SIZE);
+
+		}
+		*retval = heap_e;
+		curproc->p_addrspace->heap_region->as_vend += amount;
+
+	}
+	return 0;
 }
