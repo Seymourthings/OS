@@ -170,17 +170,17 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	}else{
 		lock_acquire(curproc->lock);
 		proc = get_proc(pid);
+		if(proc == NULL){
+			*retval = -1;
+			return ESRCH;
+		}	
+		if(proc->exited){
+			proc_destroy(proc);
+		}
 		lock_release(curproc->lock);
 	}
-/*	
-	if(proc->exited){
-		proc_destroy(proc);
-	}
-*/
-	if(proc == NULL){
-		*retval = -1;
-		return ESRCH;
-	}		
+	
+	
 	
 	if(pid == curproc->pid){
 		*retval = -1;
@@ -207,9 +207,8 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	}
 	
 	*retval = pid;
-
 //	proc_destroy(proc);
-//	kfree(proc);	
+	//kfree(proc);	
 	return 0;
 }
 
@@ -453,7 +452,6 @@ char * concat_null(char * str, size_t buflen){
 	char *rtrn = temp;
 	return rtrn;
 }
-
 
 int sys_sbrk(intptr_t amount, int *retval){
 	/*"break" is the end of heap region, retval set to old "break"*/
