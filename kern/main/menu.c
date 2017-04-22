@@ -146,6 +146,13 @@ common_prog(int nargs, char **args)
 		return result;
 	}
 
+	/** U wot m8? (Desean) **/
+	
+	// Explicitly making prog (e.g bin/true) pid == 1
+	proc->pid = 1;
+
+	/** U wot m8? (Desean) **/
+
 	// Semaphore created to be used btwn exit and menu
 	g_sem = sem_create("Hack", 0);
 	

@@ -172,9 +172,9 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 			*retval = -1;
 			return ESRCH;
 		}	
-		if(proc->exited){
+		/*if(proc->exited){
 			proc_destroy(proc);
-		}
+		}*/
 		lock_release(curproc->lock);
 	}
 	
@@ -205,7 +205,9 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	}
 	
 	*retval = pid;
-//	proc_destroy(proc);
+/*	if(proc->exited){
+		proc_destroy(proc);
+	}*/
 	//kfree(proc);	
 	return 0;
 }

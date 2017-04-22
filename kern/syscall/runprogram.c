@@ -117,6 +117,9 @@ runprogram(char *progname)
 	return EINVAL;
 }
 
+/* Removes kernel & program from proc_table 
+ * Sets global pid to 2
+ */
 void proc_init(){
 	int index = 0;
 	while(index < PROC_MAX){

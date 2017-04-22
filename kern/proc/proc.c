@@ -91,6 +91,7 @@ proc_create(const char *name)
 	proc->fd = 0;
 	
 	if(g_pid < PID_MAX){
+		g_pid = g_pid + 1;
 		proc->pid = g_pid++;
 	}
 	else{
@@ -104,9 +105,10 @@ proc_create(const char *name)
 	//proc_count++;
 	
 	/* Setting up what I think would be defaults */
-
+	
 	proc->lock = lock_create("proc lock");
 	proc->cv = cv_create("proc cv");
+
 
 	proc->exited = false;
 	
@@ -236,6 +238,7 @@ proc_destroy(struct proc *proc)
 	cv_destroy(proc->cv);
 	lock_destroy(proc->lock);
 	
+	kfree(proc->p_addrspace);	
 	kfree(proc->p_name);
 	kfree(proc);
 }
