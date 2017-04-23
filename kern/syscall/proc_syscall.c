@@ -94,6 +94,7 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 		return ENOMEM;
 	}
 	lock_acquire(proc_child->lock);
+	VOP_INCREF(curproc->p_cwd);
 	proc_child->ppid = curproc->pid;
 	proc_child->p_cwd = curproc->p_cwd;
 	lock_release(proc_child->lock);
