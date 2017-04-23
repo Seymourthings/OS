@@ -176,7 +176,7 @@ proc_destroy(struct proc *proc)
 
 	/* VFS fields */
 	if (proc->p_cwd) {
-		VOP_DECREF(proc->p_cwd);
+		//VOP_DECREF(proc->p_cwd);
 		proc->p_cwd = NULL;
 	}
 
@@ -263,6 +263,7 @@ void proc_table_remove(struct proc *proc){
 		if(proc_table[index]){
 			if(proc_table[index]->pid == proc->pid){
 				proc_table[index] = NULL;
+				break;
 			}
 		}
 			index++;

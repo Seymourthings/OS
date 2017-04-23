@@ -102,7 +102,7 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 	err = as_copy(curproc->p_addrspace, &proc_child->p_addrspace);
 	if(err){
 		*retval = -1;
-		proc_destroy(proc_child);
+	//	proc_destroy(proc_child);
 		return ENOMEM;
 	}
 	
@@ -111,7 +111,7 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 	if(tf_temp == NULL){
 		*retval = -1;
 		kfree(tf_temp);
-		proc_destroy(proc_child);
+	//	proc_destroy(proc_child);
 		return ENOMEM;
 	}
 	*tf_temp = *tf_parent;
@@ -139,11 +139,14 @@ pid_t sys_fork(struct trapframe *tf_parent, int32_t *retval){
 
 struct proc *get_proc(pid_t pid){
 	
-	int i = 0;
-	for(; i < PROC_MAX; i++){
-		if(pid == proc_table[i]->pid){
-			return proc_table[i];
+	int index = 0;
+	while(index < PROC_MAX){
+		if(proc_table[index]){
+			if(pid == proc_table[index]->pid){
+				return proc_table[index];
+			}
 		}
+		index++;
 	}
 	return NULL;
 }
@@ -168,16 +171,17 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		*retval = -1;
 		return ESRCH;
 	}else{
-		lock_acquire(curproc->lock);
+//		lock_acquire(curproc->lock);
 		proc = get_proc(pid);
 		if(proc == NULL){
 			*retval = -1;
+//			lock_release(curproc->lock);
 			return ESRCH;
 		}	
 		/*if(proc->exited){
 			proc_destroy(proc);
 		}*/
-		lock_release(curproc->lock);
+//		lock_release(curproc->lock);
 	}
 	
 	
@@ -207,9 +211,9 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	}
 	
 	*retval = pid;
-/*	if(proc->exited){
+	if(proc->exited){
 		proc_destroy(proc);
-	}*/
+	}
 	//kfree(proc);	
 	return 0;
 }
@@ -467,7 +471,7 @@ int sys_sbrk(intptr_t amount, int *retval){
 	vaddr_t new_heap_e = 0;
 
 	//check if amount is page_aligned
-	if(amount % PAGE_SIZE){
+	if(amount % 4){
 		*retval = -1;
 		return EINVAL;
 	}	 
