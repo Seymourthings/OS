@@ -461,7 +461,7 @@ char * concat_null(char * str, size_t buflen){
 }
 
 int sys_sbrk(intptr_t amount, int *retval){
-	/*"break" is the end of heap region, retval set to old "break"*/
+//	"break" is the end of heap region, retval set to old "break"
 
 	//pointer to current addrspace
 	struct addrspace *as = curproc->p_addrspace;

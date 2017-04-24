@@ -39,8 +39,8 @@ int push_pte(struct page_entry **pt, vaddr_t vpn){
 		(*pt)->vpn = vpn;
 		(*pt)->pas = alloc_upages(1);
 		return 0;	
-	}*/
-
+	}
+*/
 	struct page_entry *new_pte;
 	new_pte = kmalloc(sizeof(*new_pte));
 
@@ -50,7 +50,7 @@ int push_pte(struct page_entry **pt, vaddr_t vpn){
 	}
 	
 	new_pte->vpn = vpn;
-	new_pte->pas = alloc_upages(1);
+	new_pte->pas = alloc_upages(1); //!!!!!!!!!!!!!!!UNCOMMENT!!!!!!!!!!
 	if(new_pte->pas == 0){
 		kprintf("Paddr is 0");
 		return -1;
@@ -61,7 +61,6 @@ int push_pte(struct page_entry **pt, vaddr_t vpn){
 	
 	return 0;
 }
-
 page_entry * find_vaddr(page_entry *page_table, vaddr_t va){
 	page_entry *current = page_table;
 
