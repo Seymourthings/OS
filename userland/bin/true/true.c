@@ -37,9 +37,64 @@
 /*
  * true - succeed.
  */
+static
+	void
+dowait(int nowait, int pid)
+{
+	int x;
+	int pid2;
+
+	if (pid<0) {
+		/* fork in question failed; just return */
+		return;
+	}
+	if (pid==0) {
+		/* in the fork in question we were the child; exit */
+		exit(0);
+	}
+
+	if (!nowait) {
+		pid2 = waitpid(pid, &x, 0);
+		printf("PID is: %d \n", pid2);
+		if (pid2<0) {
+			printf("Failing at waitpid if: With PID: %d \n", pid2);
+			errx(1, "waitpid");
+		}
+		else if (WIFSIGNALED(x)) {
+			printf("Failing at waitpid 1st ELSE if \n");
+			errx(1, "pid %d: signal %d", pid, WTERMSIG(x));
+		}
+		else if (WEXITSTATUS(x) != 0) {
+			printf("Failing at waitpid 2nd ELSE if\n");
+			errx(1, "pid %d: exit %d", pid, WEXITSTATUS(x));
+		}
+	}
+}
+
+
 int
 main(void)
 {
-	printf("Hello");
-	return 0;
+	int pid, pid2, pid3;
+	pid = fork();
+	pid2 = fork();
+	pid3 = fork();
+	int nowait = 0;
+	if (pid == -1){
+		printf("fork failed\n");
+	}
+	else if(pid == 0){
+		printf("hello from child process!\n");
+	}
+	else{
+		dowait(nowait,pid3);
+		dowait(nowait, pid2);
+		dowait(nowait,pid);
+		printf("hello from the parent process ---- %d!\n", pid);
+
+	}
+
+
+	exit(0);	
 }
+

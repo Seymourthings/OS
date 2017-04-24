@@ -1237,10 +1237,11 @@ main(int argc, char *argv[])
 	bool menu = true;
 
 	setup();
-
+	printf("Sbrk - after setup");
 	if (argc > 1) {
 		for (i=1; i<argc; i++) {
 			dotest(atoi(argv[i]));
+			printf("Sbrk - after dotest");
 		}
 		return 0;
 	}
@@ -1255,11 +1256,13 @@ main(int argc, char *argv[])
 		}
 		tprintf("sbrktest: ");
 		tn = geti();
+		printf("Sbrk - after geti");
 		if (tn < 0) {
 			break;
 		}
 
 		if (dotest(tn)) {
+			printf("Sbrk - after dotest");
 			menu = true;
 		}
 	}
