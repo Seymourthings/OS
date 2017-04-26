@@ -352,7 +352,7 @@ file      vm/kmalloc.c
 file 	  vm/vm.c
 file 	  vm/pagetable.c
 
-optofffile dumbvm   vm/addrspace.c
+#optofffile dumbvm   vm/addrspace.c
 
 #
 # Network

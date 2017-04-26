@@ -74,7 +74,7 @@ ram_bootstrap(void)
 	kprintf("%uk physical memory available\n",
 		(lastpaddr-firstpaddr)/1024);
 
-	/* UNCOMMENT FOR ASST# */
+	/* UNCOMMENT FOR ASST#3 */
 	init_coremap(ramsize, temp); 
 	firstpaddr = temp;
 }

@@ -153,9 +153,12 @@ proc_destroy(struct proc *proc)
 /*	proc->fd = OPEN_MAX - 1;
 	while(proc->fd > 0){
 		if(proc->file_table[proc->fd]){
-			if(proc->file_table[proc->fd]->lock){
-				lock_destroy(proc->file_table[proc->fd]->lock);
-			}	
+			//if(proc->file_table[proc->fd]->lock){
+			//	if(proc->file_table[proc->fd]->lock->lk_thread != NULL){
+			//		lock_release(proc->file_table[proc->fd]->lock);
+
+		//		}
+		//	}	
 			kfree(proc->file_table[proc->fd]);
 		}
 		proc->fd--;
@@ -280,6 +283,8 @@ proc_bootstrap(void)
 	if (kproc == NULL) {
 		panic("proc_create for kproc failed\n");
 	}
+
+	kproc->pid = 0; //explicitly assigning pid to do check in thread_exit
 }
 
 /*
@@ -416,12 +421,12 @@ proc_setas(struct addrspace *newas)
 	spinlock_release(&proc->p_lock);
 	return oldas;
 }
-/* Stack Functions */
+/* Stack Functions */ 
 void pid_stack_init(){
 	stack_index = 0;
-	
 
 }
+
 bool pid_stack_isfull(){
 	return (stack_index == (PID_MAX / 2) - 1);
 }
@@ -444,6 +449,3 @@ int pid_stack_pop(){
 		return pid_stack[stack_index--];
 	}
 }
-
-
-

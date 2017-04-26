@@ -15,8 +15,7 @@
 #include <syscall.h>
 #include <pagetable.h>
 #include <vm.h>
-int pid_stack[PID_MAX/2];
-int stack_index;
+
 pid_t g_pid;
 char *arg_dest[ARG_MAX/64];
 
@@ -25,6 +24,7 @@ pid_t sys_getpid(int32_t *retval){
 	*retval = curproc->pid;
 	return 0;
 }
+
 
 /* Curproc exits */
 void sys_exit(int exitcode){
@@ -55,8 +55,7 @@ void sys_exit(int exitcode){
 	
 	/* Increment sem count - main/menu.c */	
 	V(g_sem);
-//	proc_destroy(curproc);
-	thread_exit();
+	thread_exit(); //<---- we call proc_destroy in here  only on the program running
 }
 
 

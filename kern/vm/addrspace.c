@@ -60,19 +60,19 @@ int push_region(struct region **region_table, vaddr_t vaddr, vaddr_t vaddr_end, 
 	return 0;
 }
 
-struct region * pop_region(struct region **region_table){
+struct region * pop_region(struct region **head){
 	struct region *temp = NULL;
-	if(*region_table == NULL){
+	if(*head == NULL){
 		kprintf("Region_table is NULL");	
 	}
-	temp = (*region_table)->next;
+	temp = (*head)->next;
+	free_kpages((*head)->as_vbase);
+	free_upages((*head)->as_pbase);
+	kfree(*head);
 
-	kfree(*region_table);
-
-	*region_table = temp;
-	return *region_table;
+	*head = temp;
+	return *head;
 }
-
 /********* Region_table functions ********/
 
 

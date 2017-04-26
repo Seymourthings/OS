@@ -41,5 +41,5 @@ int
 main(void)
 {
 	/* Just exit with a failure code. */
-	exit(1);
+	exit(0);
 }

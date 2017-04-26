@@ -15,6 +15,7 @@ page_entry * pop(page_entry **page_table){
 		kprintf("Page_table is NULL");	
 	}
 	temp = (*page_table)->next;
+	free_upages((*page_table)->pas);
 
 	kfree(*page_table);
 

@@ -805,15 +805,20 @@ void
 thread_exit(void)
 {
 	struct thread *cur;
+	struct proc *cur_proc;
 
 	cur = curthread;
-
+	cur_proc = cur->t_proc;
 	/*
 	 * Detach from our process. You might need to move this action
 	 * around, depending on how your wait/exit works.
 	 */
+	
 	proc_remthread(cur);
-
+	if(cur_proc->pid == 1){
+		proc_destroy(cur_proc);
+		//kfree(proc_table);
+	}
 	/* Make sure we *are* detached (move this only if you're sure!) */
 	KASSERT(cur->t_proc == NULL);
 
