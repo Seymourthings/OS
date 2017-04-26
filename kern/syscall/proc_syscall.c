@@ -469,7 +469,7 @@ int sys_sbrk(intptr_t amount, int *retval){
 	vaddr_t heap_s = as->heap_region->as_vbase;
 	vaddr_t heap_e = as->heap_region->as_vend;
 	vaddr_t new_heap_e = 0;
-
+	
 	//check if amount is page_aligned
 	if(amount % 4){
 		*retval = -1;
@@ -485,9 +485,17 @@ int sys_sbrk(intptr_t amount, int *retval){
 	//check if amount will move heap_e into stack region
 	vaddr_t stack_s = as->stack_region->as_vbase;
 	
-	if((amount + heap_e) > stack_s){
+	if( amount > 0 && (amount + heap_e) > stack_s){
 		*retval = -1;
 		return ENOMEM;
+	}
+	else {
+		if(amount < 0){
+			if(((long)heap_e + amount) < (long)heap_s){
+				*retval = -1;
+				return EINVAL;
+			}
+		}
 	}
 
 	int i = 0;

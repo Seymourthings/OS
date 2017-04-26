@@ -817,7 +817,6 @@ thread_exit(void)
 	proc_remthread(cur);
 	if(cur_proc->pid == 1){
 		proc_destroy(cur_proc);
-		//kfree(proc_table);
 	}
 	/* Make sure we *are* detached (move this only if you're sure!) */
 	KASSERT(cur->t_proc == NULL);
