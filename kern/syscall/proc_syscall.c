@@ -28,7 +28,7 @@ pid_t sys_getpid(int32_t *retval){
 
 /* Curproc exits */
 void sys_exit(int exitcode){
-	
+
 	/*
 	 * Since this is exiting, if any children were
 	 * forked from here, we must assign them a new parent.

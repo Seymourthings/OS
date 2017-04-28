@@ -99,8 +99,6 @@ runprogram(char *progname)
 
 	proc_init();	
 	result = filesys_init();
-	kprintf("Sizeof file_handle: %d \n", sizeof(struct file_handle));
-	kprintf("Sizeof Proc: %d \n", sizeof(struct proc));
 
 	/* Define the user stack in the address space */
 	result = as_define_stack(as, &stackptr);

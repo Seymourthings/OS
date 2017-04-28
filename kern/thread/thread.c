@@ -809,6 +809,22 @@ thread_exit(void)
 
 	cur = curthread;
 	cur_proc = cur->t_proc;
+		
+	/*
+	 * Release the file handles of their misery/ cleanup pls
+	 */
+	int retval, err, fd;
+	fd = 0;
+	cur_proc->fd = OPEN_MAX - 1;
+	while(fd < 127){
+		if(cur_proc->file_table[fd]){
+			err = sys_close(fd, &retval);
+			if(!err)
+				kfree(cur_proc->file_table[fd]);
+		}
+		fd++;
+	}
+	
 	/*
 	 * Detach from our process. You might need to move this action
 	 * around, depending on how your wait/exit works.

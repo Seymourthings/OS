@@ -143,9 +143,9 @@ as_create(void)
 		return NULL;
 	}
 	
-	as->page_table->vpn = 0;	
-	as->page_table->pas = 0;	
-	as->page_table->next = NULL;	
+	as->page_table->vpn = 0;
+	as->page_table->pas = 0;
+	as->page_table->next = NULL;
 
 	return as;
 }
@@ -186,10 +186,7 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 		if(err){
 			return err;
 		}
-
-		
 		temp = temp->next;
-	
 	}
 
 	//Copy stack region
@@ -205,7 +202,6 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	
 	}
 
-	
 	//Copy page_table
 	temp_pte = old->page_table;	
 	while(temp_pte != NULL){
@@ -232,13 +228,21 @@ as_destroy(struct addrspace *as)
 	while(as->region_table != NULL){
 		as->region_table = pop_region(&as->region_table);
 	}
+	
+	kfree(as->region_table); //head
+
 	while(as->stack_region != NULL){
 		as->stack_region = pop_region(&as->stack_region);	
 	}
+	
+	kfree(as->stack_region); //head
+	
 	while(as->heap_region != NULL){
 		as->heap_region = pop_region(&as->heap_region);
 	}
-
+		
+	kfree(as->heap_region);
+	
 	struct page_entry * head = destroy_pagetable(as->page_table);
 	kfree(head);
 	kfree(as);
@@ -294,7 +298,9 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 	
 	/* Taken from DUMBVM */
 	size_t npages = 0;
-
+	(void)readable;
+	(void)writeable;
+	(void)executable;
 
 	
 	/* Align the region. First, the base... */
@@ -307,8 +313,6 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 	npages = memsize / PAGE_SIZE;
 	
 	/* Put it altogether now */
-	int permissions = concat_permissions(readable,writeable,executable);
-	(void)permissions;
 	
 	vaddr_t vaddr_end = vaddr + (npages*PAGE_SIZE);
 	if(as->region_table->as_vbase== 0){
@@ -325,7 +329,6 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t memsize,
 
 	if(as->heap_region->as_vbase < as->region_table->as_vend){
 		as->heap_region->as_vbase = as->region_table->as_vend;
-		//heap end is same as heap start at first.
 		as->heap_region->as_vend = as->region_table->as_vend;
 		return 0;
 	}
