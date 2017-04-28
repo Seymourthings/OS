@@ -198,7 +198,6 @@ int valid_address(vaddr_t faultaddress, struct addrspace *as){
 			valid = region_check(faultaddress, as->heap_region);
 			/* If it gets here, it's not valid*/
 			if(!valid){
-				//kprintf("Address could not be found in any region");
 				return EFAULT;	
 			}
 			return 0;
@@ -247,19 +246,16 @@ vm_fault(int faulttype, vaddr_t faultaddress){
 		return EFAULT;
 	}
 	//uint32_t fault = PAGE_FRAME;
-	//kprintf("The pageframe = %04x \n", fault);
 	
 	err = valid_address(faultaddress, as);
 	if(err){
 		return err; //check valid_addr return value
 	}
-	//kprintf("It does get here");	
 	
 	//Vaild address, mask vaddr w/ PAGE_FRAME to get vpn to check for PTE inpage_table linked list.
 	
 	vaddr_t vpn = faultaddress & PAGE_FRAME;
 	
-	//kprintf("VPN = %04x \n", vpn);
 	struct page_entry *pg_entry;
 	pg_entry = vpn_check(vpn, as->page_table);
 	if(pg_entry == NULL){
@@ -291,7 +287,6 @@ vm_fault(int faulttype, vaddr_t faultaddress){
 	elo = tlb_pas | TLBLO_DIRTY | TLBLO_VALID;
 /*	tlb_return = tlb_probe(ehi,elo);
 	if(tlb_return < 0){
-		kprintf("ELO : %d",elo);
 	}*/
 	tlb_random(ehi, elo);
 	
@@ -336,7 +331,6 @@ init_coremap(size_t ramsize, paddr_t firstpaddr){
 		coremap[i].entry_pas = entrypaddr;
 		coremap[i].as = NULL;
 		coremap[i].pas = pg_paddr;
-		//kprintf("Coremap[index].pas: %d\n", coremap[i].pas);
 		coremap[i].vas = PADDR_TO_KVADDR(pg_paddr);
 		coremap[i].block_size = 0;
 		coremap[i].pg_state = PAGE_FREE;

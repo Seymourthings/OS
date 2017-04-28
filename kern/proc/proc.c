@@ -49,6 +49,8 @@
 #include <addrspace.h>
 #include <vnode.h>
 #include <kern/unistd.h>
+#include <vfs.h>
+#include <file_syscall.h>
 
 int pid_stack[PID_MAX / 2];
 int stack_index;
@@ -145,22 +147,7 @@ proc_destroy(struct proc *proc)
 	
 	/*-------- U wot m8? (Desean) --------*/
 	
-	/*
-	 * Figure the fd will be changed around during file creations/deletes
-	 * so ensure it starts at the end and traverses till the beginning
-	 */
 
-/*	proc->fd = OPEN_MAX - 1;
-	while(proc->fd > 0){
-		if(proc->file_table[proc->fd]){
-			if(proc->file_table[proc->fd]->lock){
-				lock_destroy(proc->file_table[proc->fd]->lock);
-			}	
-			kfree(proc->file_table[proc->fd]);
-		}
-		proc->fd--;
-	}
-*/
 	/* Thread */
 	if(proc->thread){
 		proc->thread = NULL;
@@ -280,6 +267,8 @@ proc_bootstrap(void)
 	if (kproc == NULL) {
 		panic("proc_create for kproc failed\n");
 	}
+
+	kproc->pid = 0; //explicitly assigning pid to do check in thread_exit
 }
 
 /*
@@ -416,12 +405,12 @@ proc_setas(struct addrspace *newas)
 	spinlock_release(&proc->p_lock);
 	return oldas;
 }
-/* Stack Functions */
+/* Stack Functions */ 
 void pid_stack_init(){
 	stack_index = 0;
-	
 
 }
+
 bool pid_stack_isfull(){
 	return (stack_index == (PID_MAX / 2) - 1);
 }
@@ -444,6 +433,3 @@ int pid_stack_pop(){
 		return pid_stack[stack_index--];
 	}
 }
-
-
-

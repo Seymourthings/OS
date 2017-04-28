@@ -122,15 +122,6 @@ kmalloctest(int nargs, char **args)
 	kprintf("\n");
 	success(TEST161_SUCCESS, SECRET, "km1");
 	
-	kprintf("Starting Pagetable Init...\n");
-//	page_table = pagetable_init();
-	kprintf("Printing .... \n");
-	/*print_list(page_table);
-	kprintf("Removing a node...\n");
-	remove(&page_table,102);
-	page_table = destroy_pagetable(page_table);
-	print_list(page_table);
-	kfree(page_table);*/
 	return 0;
 }
 

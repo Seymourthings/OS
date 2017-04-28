@@ -27,9 +27,10 @@ pid_t sys_getpid(int32_t *retval){
 	return 0;
 }
 
+
 /* Curproc exits */
 void sys_exit(int exitcode){
-	
+
 	/*
 	 * Since this is exiting, if any children were
 	 * forked from here, we must assign them a new parent.
@@ -62,8 +63,7 @@ void sys_exit(int exitcode){
 	
 	/* Increment sem count - main/menu.c */	
 	V(g_sem);
-//	proc_destroy(curproc);
-	thread_exit();
+	thread_exit(); //<---- we call proc_destroy in here  only on the program running
 }
 
 
@@ -494,9 +494,17 @@ int sys_sbrk(intptr_t amount, int *retval){
 	//check if amount will move heap_e into stack region
 	vaddr_t stack_s = as->stack_region->as_vbase;
 	
-	if((amount + heap_e) > stack_s){
+	if( amount > 0 && (amount + heap_e) > stack_s){
 		*retval = -1;
 		return ENOMEM;
+	}
+	else {
+		if(amount < 0){
+			if(((long)heap_e + amount) < (long)heap_s){
+				*retval = -1;
+				return EINVAL;
+			}
+		}
 	}
 
 	int i = 0;

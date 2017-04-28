@@ -75,9 +75,12 @@ dowait(int nowait, int pid)
 int
 main(void)
 {
-	int pid, pid2, pid3;
-	pid = fork();
-	pid2 = fork();
+	int pid/*, pid2, pid3*/;
+	//pid = fork();
+	(void)pid;
+	(void)dowait;
+//	printf("Hello");
+/*	pid2 = fork();
 	pid3 = fork();
 	int nowait = 0;
 	if (pid == -1){
@@ -92,7 +95,7 @@ main(void)
 		dowait(nowait,pid);
 		printf("hello from the parent process ---- %d!\n", pid);
 
-	}
+	}*/
 
 
 	exit(0);	

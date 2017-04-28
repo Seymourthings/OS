@@ -178,6 +178,7 @@ int filesys_init(){
 	
 	while(curproc->fd < OPEN_MAX){
 		curproc->file_table[curproc->fd] = NULL;
+		bzero(&curproc->file_table[curproc->fd], sizeof(struct file_handle *));
 		curproc->fd++;
 	}
 

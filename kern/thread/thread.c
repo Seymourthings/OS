@@ -805,15 +805,38 @@ void
 thread_exit(void)
 {
 	struct thread *cur;
+	struct proc *cur_proc;
 
 	cur = curthread;
-
+	cur_proc = cur->t_proc;
+		
 	/*
+	 * Release the file handles of their misery/ cleanup pls
+	 
+	int retval, err, fd;
+	fd = 0;
+	cur_proc->fd = OPEN_MAX - 1;
+	while(fd < 127){
+		if(cur_proc->file_table[fd]){
+			err = sys_close(fd, &retval);
+			if(!err){
+				if(cur_proc->file_table[fd]->lock)
+					lock_destroy(cur_proc->file_table[fd]->lock);
+				kfree(cur_proc->file_table[fd]);
+			}
+		}
+		fd++;
+	}
+	
+	*
 	 * Detach from our process. You might need to move this action
 	 * around, depending on how your wait/exit works.
 	 */
+	
 	proc_remthread(cur);
-
+	if(cur_proc->pid == 1){
+		proc_destroy(cur_proc);
+	}
 	/* Make sure we *are* detached (move this only if you're sure!) */
 	KASSERT(cur->t_proc == NULL);
 
