@@ -819,8 +819,11 @@ thread_exit(void)
 	while(fd < 127){
 		if(cur_proc->file_table[fd]){
 			err = sys_close(fd, &retval);
-			if(!err)
+			if(!err){
+				if(cur_proc->file_table[fd]->lock)
+					lock_destroy(cur_proc->file_table[fd]->lock);
 				kfree(cur_proc->file_table[fd]);
+			}
 		}
 		fd++;
 	}
