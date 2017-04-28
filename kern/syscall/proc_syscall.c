@@ -15,6 +15,7 @@
 #include <syscall.h>
 #include <pagetable.h>
 #include <vm.h>
+#include <mips/tlb.h>
 int pid_stack[PID_MAX/2];
 int stack_index;
 pid_t g_pid;
@@ -46,8 +47,14 @@ void sys_exit(int exitcode){
 		}
 		index++;
 	}
+	if(exitcode >= 1 && exitcode <= 32){
 
+		curproc->exitcode = _MKWAIT_SIG(exitcode);
+	}
+	else{
 	curproc->exitcode = _MKWAIT_EXIT(exitcode);
+	}
+
 	curproc->exited = true;
 	cv_broadcast(curproc->cv, curproc->lock);
 	
@@ -460,6 +467,7 @@ char * concat_null(char * str, size_t buflen){
 	return rtrn;
 }
 
+
 int sys_sbrk(intptr_t amount, int *retval){
 //	"break" is the end of heap region, retval set to old "break"
 
@@ -470,7 +478,7 @@ int sys_sbrk(intptr_t amount, int *retval){
 	vaddr_t heap_s = as->heap_region->as_vbase;
 	vaddr_t heap_e = as->heap_region->as_vend;
 	vaddr_t new_heap_e = 0;
-
+	
 	//check if amount is page_aligned
 	if(amount % 4){
 		*retval = -1;
@@ -493,6 +501,7 @@ int sys_sbrk(intptr_t amount, int *retval){
 
 	int i = 0;
 	int npages = 0;
+	int tlb_index = 0;
 	vaddr_t vpn = 0;
 //	paddr_t pas = 0;
 	struct page_entry * pg_entry;
@@ -507,8 +516,18 @@ int sys_sbrk(intptr_t amount, int *retval){
 					
 			new_heap_e -= PAGE_SIZE;
 			vpn = new_heap_e & PAGE_FRAME;
+			
+			//update tlb
+			tlb_index = tlb_probe(vpn,0);
+			
+			if(tlb_index > 0){
+			
+
+			tlb_write(TLBHI_INVALID(tlb_index),TLBLO_INVALID(),tlb_index);
 			pg_entry = vpn_check(vpn, as->page_table);
 			free_upages(pg_entry->pas);
+		}
+
 
 		}
 		

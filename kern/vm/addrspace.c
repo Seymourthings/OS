@@ -213,6 +213,7 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 		if(err){
 			return err;
 		}
+		bzero((void*)PADDR_TO_KVADDR(newas->page_table->pas),PAGE_SIZE);
 		memmove((void*)PADDR_TO_KVADDR(newas->page_table->pas), (const void*)PADDR_TO_KVADDR(temp_pte->pas),PAGE_SIZE);
 		temp_pte = temp_pte->next;
 	
