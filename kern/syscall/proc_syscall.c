@@ -16,6 +16,7 @@
 #include <pagetable.h>
 #include <vm.h>
 #include <mips/tlb.h>
+
 int pid_stack[PID_MAX/2];
 int stack_index;
 pid_t g_pid;
@@ -179,20 +180,12 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 		*retval = -1;
 		return ESRCH;
 	}else{
-//		lock_acquire(curproc->lock);
 		proc = get_proc(pid);
 		if(proc == NULL){
 			*retval = -1;
-//			lock_release(curproc->lock);
 			return ESRCH;
 		}	
-		/*if(proc->exited){
-			proc_destroy(proc);
-		}*/
-//		lock_release(curproc->lock);
 	}
-	
-	
 	
 	if(pid == curproc->pid){
 		*retval = -1;
@@ -220,6 +213,11 @@ pid_t sys_waitpid(pid_t pid, int *status, int options, int32_t *retval){
 	
 	*retval = pid;
 	if(proc->exited){
+				
+	/*
+	 * Release the file handles of their misery/ cleanup pls
+	 */
+	 
 		proc_destroy(proc);
 	}
 	//kfree(proc);	

@@ -104,8 +104,6 @@ proc_create(const char *name)
 	
 	proc->ppid = 0;
 
-	//proc_count++;
-	
 	/* Setting up what I think would be defaults */
 	
 	proc->lock = lock_create("proc lock");
@@ -219,7 +217,6 @@ proc_destroy(struct proc *proc)
 	spinlock_cleanup(&proc->p_lock);
 	
 	proc_table_remove(proc);
-//	proc_count--;
 	pid_stack_push(proc->pid);
 
 	cv_destroy(proc->cv);

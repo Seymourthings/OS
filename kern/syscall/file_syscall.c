@@ -97,7 +97,8 @@ int sys_open(const char *filename, int flags, int mode, int32_t *retval){
 
 	//open file
 	err = vfs_open(file_dest,flags,mode, &curproc->file_table[fd]->vnode);
-	
+	VOP_INCREF(curproc->file_table[fd]->vnode);
+
 	if(err){
 		*retval = -1;	
 		kfree(file_dest);
@@ -133,15 +134,11 @@ int sys_close(int fd, int32_t *retval){
 		*retval = -1;
 		return EBADF;
 	}
-	if(curproc->file_table[fd]->count == 1){
-		vfs_close(curproc->file_table[fd]->vnode);
-		curproc->file_table[fd]->count= 0;
-		//lock_destroy(curproc->file_table[fd]->lock);
-	}else if (curproc->file_table[fd]->count > 1){
-		lock_acquire(curproc->file_table[fd]->lock);	
-		curproc->file_table[fd]->count--;
-		lock_release(curproc->file_table[fd]->lock);
-	}
+	
+	vfs_close(curproc->file_table[fd]->vnode);
+	if(curproc->file_table[fd]->vnode->vn_refcount == 0){
+		vnode_cleanup(curproc->file_table[fd]->vnode);
+	}	
 
 	*retval = 0;
 	return 0;
