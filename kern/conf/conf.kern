@@ -349,8 +349,8 @@ file      proc/proc.c
 #
 
 file      vm/kmalloc.c
-file 	  vm/vm.c
-file 	  vm/pagetable.c
+#file 	  vm/vm.c
+#file 	  vm/pagetable.c
 
 optofffile dumbvm   vm/addrspace.c
 

@@ -75,7 +75,7 @@ ram_bootstrap(void)
 		(lastpaddr-firstpaddr)/1024);
 
 	/* UNCOMMENT FOR ASST#3 */
-	init_coremap(ramsize, temp); 
+//	init_coremap(ramsize, temp); 
 	firstpaddr = temp;
 }
 

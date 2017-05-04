@@ -482,7 +482,7 @@ char * concat_null(char * str, size_t buflen){
 	return temp;
 }
 
-
+/*
 int sys_sbrk(intptr_t amount, int *retval){
 //	"break" is the end of heap region, retval set to old "break"
 
@@ -584,3 +584,5 @@ int sys_sbrk(intptr_t amount, int *retval){
 	}
 	return 0;
 }
+
+*/
