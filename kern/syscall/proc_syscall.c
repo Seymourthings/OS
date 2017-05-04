@@ -20,7 +20,8 @@
 int pid_stack[PID_MAX/2];
 int stack_index;
 pid_t g_pid;
-char *arg_dest[ARG_MAX/64];
+//char *arg_dest[ARG_MAX/64];
+char char_buffer[ARG_MAX];
 
 /* Returns the current process's ID */
 pid_t sys_getpid(int32_t *retval){
@@ -232,16 +233,21 @@ int sys_execv(char* progname, char** args, int *retval){
 		arg_dest[z] = '\0';
 	}	
 */
-	bzero(arg_dest, sizeof(arg_dest));
+	
+//	bzero(arg_dest, sizeof(arg_dest));
+	bzero(char_buffer, sizeof(char_buffer));
 	struct addrspace *as;
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
 	int result, index, numindex, argc, char_buflen;
-	size_t proglen, arglen, char_index, char_reset, arg_pointer_count;
+	size_t arglen, char_index, char_reset;
+// arg_pointer_count;
 
 	unsigned int testprogname = (unsigned int)progname;	
 	unsigned int testargs = (unsigned int)args;
 	unsigned int testarg;
+	
+	//char *arg_dest[ARG_MAX/64];
 	
 	if(progname == NULL){
 		*retval = -1;
@@ -270,16 +276,17 @@ int sys_execv(char* progname, char** args, int *retval){
 	index = 0;
 	char_buflen = 0;
 	char_index = 0;
-	arg_pointer_count = sizeof(args);
+//	arg_pointer_count = sizeof(args);
 
-	size_t pointer_index = 0;
-	char *arg_strings[64];
-		
+//	size_t pointer_index = 0;
+//	char *arg_strings[64];
+/*		
 	result = copyin((const_userptr_t)args, (void*)&arg_strings[pointer_index], arg_pointer_count);
 	if(result){
 		*retval = -1;
 		return ENOMEM;
 	}
+*/
 
 	if(strlen(progname) == 0){
 		*retval = -1;
@@ -304,23 +311,26 @@ int sys_execv(char* progname, char** args, int *retval){
 	
 	//currently holds the count of arguments - excluding the progname
 	argc = index;
-	char prog_dest[PATH_MAX];
-	char char_buffer[char_buflen];
+//	char prog_dest[PATH_MAX];
+
+//	char char_buffer[char_buflen];
 	//int array for args word count in terms of 4byte words arg+padding 
 	int num_of_4byte[argc];
 	/*copy in progname (PATH)*/
-	result = copyinstr((const_userptr_t)progname, prog_dest, PATH_MAX, &proglen);
+/*
+	result = copyinstr((const_userptr_t)progname, prog_dest, PATH_MAX,&proglen);
 	
 	if(result){
 		*retval = -1;
 		kfree(prog_dest);
 		return ENOMEM;
 	}
-	
+*/	
 	/* Use copyin, since not a string.
 	 * Is arg_dest (which is in the kernel) pointing to 
 	 * args elements (in userspace) after copyin gets called?
 	*/
+/*
 	lock_acquire(curproc->lock);	
 	result = copyin((const_userptr_t)args, (void*)&arg_dest, arglen);
 	if(result){
@@ -329,7 +339,7 @@ int sys_execv(char* progname, char** args, int *retval){
 		return ENOMEM;
 	}
 	lock_release(curproc->lock);
-
+*/
 
 	/* The one about the null padding 
 	 * After this char_buffer is an array of chars
@@ -339,12 +349,12 @@ int sys_execv(char* progname, char** args, int *retval){
 	index = 0;
 	numindex = 0;
 	char_reset = 0;
-	while(arg_dest[index] != NULL){
-		size_t len = 4 - (strlen(arg_dest[index])%4);
+	while(args[index] != NULL){
+		size_t len = 4 - (strlen(args[index])%4);
 		/*newlen includes null chars to be copied by concat_null*/
 			
-		size_t newlen = strlen(arg_dest[index]) + len;	
-		char *temp = concat_null(arg_dest[index], newlen);
+		size_t newlen = strlen(args[index]) + len;	
+		char *temp = concat_null(args[index], newlen);
 		//numof4bytes holds number of 4bytes that makes up temp
 		int numof4byte = (strlen(temp) + len) / 4;
 		while(char_reset< newlen){
@@ -352,6 +362,7 @@ int sys_execv(char* progname, char** args, int *retval){
 			char_index++;
 			char_reset++;
 		}
+		kfree(temp);
 		//add current args number of 4 bytes to array 
 		num_of_4byte[numindex] = numof4byte;
 		numindex++;
@@ -359,13 +370,13 @@ int sys_execv(char* progname, char** args, int *retval){
 		char_reset = 0; //start from beginning of new string
 		newlen = 0;
 	}
-	
 	/* Open the file. */
 	result = vfs_open(progname, O_RDONLY, 0, &v);
 	if (result) {
 		*retval = -1;
-		kfree(prog_dest);
-		kfree(arg_dest);
+//		kfree(prog_dest);
+	//	kfree(arg_dest);
+		
 		return result;
 	}
 
@@ -376,6 +387,13 @@ int sys_execv(char* progname, char** args, int *retval){
 		return ENOMEM;
 	}
 
+	//get old adderspace and destroy it
+	struct addrspace *oldas = curproc->p_addrspace;
+	if(oldas != NULL){
+		as_destroy(oldas);
+	}
+
+ 
 	/* Switch to it and activate it. */
 	proc_setas(as);
 	as_activate();
@@ -401,7 +419,7 @@ int sys_execv(char* progname, char** args, int *retval){
 	}	
 		
 	/* Size of char buffer and char pointers array*/
-	stackptr -= sizeof(char_buffer);
+	stackptr -= char_buflen;
 	
 	/* "/testbin/add 1 2" has 4 ptrs */
 	void *userspace_args[argc+1];
@@ -416,7 +434,7 @@ int sys_execv(char* progname, char** args, int *retval){
 	userspace_args[index] = NULL;
 	/* Size of char pointer array and char buffer array */
 	size_t usr_args_size = sizeof(userspace_args);
-	size_t char_buffer_size = sizeof(char_buffer);
+	size_t char_buffer_size = char_buflen;
 	size_t copyout_data = usr_args_size + char_buffer_size;
 	
 	
@@ -431,7 +449,7 @@ int sys_execv(char* progname, char** args, int *retval){
 	stackptr += usr_args_size;
 	
 	
-	result = copyout((const void*)char_buffer, (userptr_t)stackptr,char_buffer_size);
+	result = copyout((const void*)char_buffer, (userptr_t)stackptr,char_buflen);
 	stackptr += char_buffer_size;
 	
 	stackptr -= copyout_data;
@@ -447,7 +465,7 @@ int sys_execv(char* progname, char** args, int *retval){
 
 char * concat_null(char * str, size_t buflen){
 	size_t index = 0;
-	char temp[buflen];
+	char *temp = kmalloc(buflen);
 	
 	/* Null out buffer before it gets used */
 	while(index < buflen){
@@ -461,8 +479,7 @@ char * concat_null(char * str, size_t buflen){
 		index++;
 	}
 	
-	char *rtrn = temp;
-	return rtrn;
+	return temp;
 }
 
 

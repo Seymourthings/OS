@@ -1,4 +1,5 @@
 /*
+	bzero(arg_dest, sizeof(arg_dest));
  * Copyright (c) 2014
  *	The President and Fellows of Harvard College.
  *
@@ -347,7 +348,7 @@ void
 test1(void)
 {
 	void *p;
-	kheap_printstats(void);
+//	kheap_printstats(void);
 	tprintf("Allocating a page...\n");
 	p = dosbrk(PAGE_SIZE);
 	markpage(p, 0);
@@ -357,7 +358,7 @@ test1(void)
 	success(TEST161_SUCCESS, SECRET, "/testbin/sbrktest");
 
 	
-	kheap_printstats(void);
+//	kheap_printstats(void);
 }
 
 /*
