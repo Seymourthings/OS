@@ -26,7 +26,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -348,7 +347,7 @@ void
 test1(void)
 {
 	void *p;
-
+	kheap_printstats(void);
 	tprintf("Allocating a page...\n");
 	p = dosbrk(PAGE_SIZE);
 	markpage(p, 0);
@@ -356,6 +355,9 @@ test1(void)
 		errx(1, "FAILED: data corrupt");
 	}
 	success(TEST161_SUCCESS, SECRET, "/testbin/sbrktest");
+
+	
+	kheap_printstats(void);
 }
 
 /*
@@ -961,7 +963,7 @@ test15(void)
 		/* child */
 		for (i=0; i<num; i++) {
 			if (checkpage(p, i, false)) {
-				errx(1, "FAILED: data corrupt in child");
+				errx(1, "FAILED: data corrupt in child (test)");
 			}
 		}
 

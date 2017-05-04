@@ -264,7 +264,7 @@ vm_fault(int faulttype, vaddr_t faultaddress){
 			return err;
 		}
  
-		bzero((void *)PADDR_TO_KVADDR(as->page_table->pas), PAGE_SIZE);
+	//	bzero((void *)PADDR_TO_KVADDR(as->page_table->pas), PAGE_SIZE);
 		//else
 		//write new pte to TLB
 			

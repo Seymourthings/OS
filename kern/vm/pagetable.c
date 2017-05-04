@@ -56,7 +56,7 @@ int push_pte(struct page_entry **pt, vaddr_t vpn){
 		kprintf("Paddr is 0");
 		return -1;
 	}
-		
+	bzero((void*)PADDR_TO_KVADDR(new_pte->pas),PAGE_SIZE);		
 	new_pte->next = *pt;
 	*pt = new_pte;
 	

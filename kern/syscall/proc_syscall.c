@@ -560,7 +560,7 @@ int sys_sbrk(intptr_t amount, int *retval){
 			if(err){
 				return err;
 			}
-			bzero((void*)PADDR_TO_KVADDR(as->page_table->pas), PAGE_SIZE);
+			//bzero((void*)PADDR_TO_KVADDR(as->page_table->pas), PAGE_SIZE);
 
 		}
 		*retval = heap_e;
